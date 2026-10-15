@@ -1,0 +1,93 @@
+% figure_sheet_single.tex - every figure of a SINGLE-column paper at print size.
+%
+% 1. Draw the figures with --layout single:   python fig_examples.py --layout single
+%    (they are written to ../images/paper_single/)
+% 2. Compile twice (the second run resolves the Fig. references):
+%        cd latex
+%        pdflatex figure_sheet_single
+%        pdflatex figure_sheet_single
+%
+% The page is a stand-in for NeurIPS / ICLR: 10 pt Times, text width 5.5 in. For a venue, delete the
+% geometry and times lines and load its style file instead (e.g. \usepackage{neurips_20xx}); the line
+% with \typeout writes the real widths into the log: the figures are drawn for \linewidth = 397.5 pt
+% (5.5 in), see docs/paper_figure_guide.md, section 2. Add your own figures below, in the same way.
+\documentclass[10pt]{article}
+\usepackage[paperwidth=8.5in,paperheight=11in,textwidth=5.5in,textheight=9in,top=1in]{geometry}
+\usepackage{times}
+\usepackage{graphicx,subcaption,wrapfig,tikz,placeins}
+\graphicspath{{../images/paper_single/}}
+
+% a label written by LaTeX on top of a figure (guide, section 8): \ovlfig[width]{figure}{labels file}
+\newcommand{\ovltag}[4]{\node[anchor=#3, inner sep=1.2pt, font=\scriptsize, fill=white,
+  fill opacity=0.78, text opacity=1] at (#1,#2) {Fig.~\ref{#4}};}
+\newcommand{\ovlfig}[3][1]{%
+  \begin{tikzpicture}
+    \node[anchor=south west,inner sep=0] (im) {\includegraphics[width=#1\linewidth]{#2.pdf}};
+    \begin{scope}[x={(im.south east)},y={(im.north west)}]\input{#3}\end{scope}
+  \end{tikzpicture}}
+
+\begin{document}
+\typeout{WIDTHS: textwidth=\the\textwidth, columnwidth=\the\columnwidth, linewidth=\the\linewidth}
+
+\section*{Figure sheet, single column}
+Body text at 10\,pt, to compare with the text of the figures: ticks and legends print at about 7\,pt,
+axis labels at about 9\,pt.
+
+% a row of tiles, full width (recipe 6.7); also the target of the map's box (label fig:window)
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{fig_example_tiles.pdf}
+  \caption{A row of tiles at full width.}\label{fig:window}
+\end{figure}
+
+% two figures side by side, each 0.48 of the text width (recipe 6.8)
+\begin{figure}[t]
+  \centering
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{fig_example_pair_a.pdf}
+    \caption{RMSE versus horizon.}\label{fig:pair-a}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.48\linewidth}
+    \includegraphics[width=\linewidth]{fig_example_pair_b.pdf}
+    \caption{Loss versus previous cycles.}\label{fig:pair-b}
+  \end{subfigure}
+  \caption{Two figures side by side.}\label{fig:pair}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{fig_example_snapshot.pdf}
+  \caption{Signal and residual at one instant.}\label{fig:snapshot}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{fig_example_bands.pdf}
+  \caption{A metric with its distribution (one panel at full width is wide: prefer the tiles or
+  the pair).}\label{fig:bands}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{fig_example_split.pdf}
+  \caption{Two windows of a signal.}\label{fig:split}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{fig_example_convergence.pdf}
+  \caption{Curves with a zoom, and grouped bars.}\label{fig:conv}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \ovlfig{fig_example_map}{../images/paper_single/fig_example_map_labels}
+  \caption{A path coloured by a value; the label of the box is written by \LaTeX.}\label{fig:map}
+\end{figure}
+
+% a figure next to the text, drawn at 0.6 and included at the width save() printed (0.58)
+\begin{wrapfigure}{r}{0.58\linewidth}
+  \centering
+  \includegraphics[width=0.58\linewidth]{fig_example_topviews.pdf}
+  \caption{Top views of two objects.}\label{fig:topviews}
+\end{wrapfigure}
+Text that wraps around a figure at 0.58 of the text width. Text that wraps around a figure at 0.58
+of the text width. Text that wraps around a figure at 0.58 of the text width. Text that wraps around
+a figure at 0.58 of the text width. See Fig.~\ref{fig:topviews}.
+
+\FloatBarrier
+\end{document}

@@ -1,0 +1,74 @@
+% figure_sheet_two.tex - every figure of a TWO-column paper at print size (elsarticle 5p).
+%
+% 1. Draw the figures with the default layout:   python fig_examples.py
+%    (they are written to ../images/paper/)
+% 2. Compile twice (the second run resolves the Fig. references):
+%        cd latex
+%        pdflatex figure_sheet_two
+%        pdflatex figure_sheet_two
+%
+% The figures are drawn for one column: \columnwidth = 252 pt = 3.5 in (docs/paper_figure_guide.md,
+% section 2). Add your own figures below, in the same way.
+\documentclass[5p,twocolumn]{elsarticle}
+\usepackage{graphicx,tikz,placeins}
+\graphicspath{{../images/paper/}}
+
+% a label written by LaTeX on top of a figure (guide, section 8): \ovlfig[width]{figure}{labels file}
+\newcommand{\ovltag}[4]{\node[anchor=#3, inner sep=1.2pt, font=\scriptsize, fill=white,
+  fill opacity=0.78, text opacity=1] at (#1,#2) {Fig.~\ref{#4}};}
+\newcommand{\ovlfig}[3][1]{%
+  \begin{tikzpicture}
+    \node[anchor=south west,inner sep=0] (im) {\includegraphics[width=#1\linewidth]{#2.pdf}};
+    \begin{scope}[x={(im.south east)},y={(im.north west)}]\input{#3}\end{scope}
+  \end{tikzpicture}}
+
+\begin{document}
+\typeout{WIDTHS: textwidth=\the\textwidth, columnwidth=\the\columnwidth, linewidth=\the\linewidth}
+
+\begin{frontmatter}
+\title{Figure sheet, two columns}
+\author{}
+\begin{abstract}
+Every figure of the paper at print size, one column wide.
+\end{abstract}
+\end{frontmatter}
+
+% signal and residual; also the target of the map's box (label fig:window)
+\begin{figure}[t]\centering
+  \includegraphics[width=\columnwidth]{fig_example_snapshot.pdf}
+  \caption{Signal and residual at one instant.}\label{fig:window}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\columnwidth]{fig_example_bands.pdf}
+  \caption{A metric with its distribution.}\label{fig:bands}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\columnwidth]{fig_example_tiles.pdf}
+  \caption{One tile per model.}\label{fig:tiles}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\columnwidth]{fig_example_split.pdf}
+  \caption{Two windows of a signal.}\label{fig:split}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\columnwidth]{fig_example_convergence.pdf}
+  \caption{Curves with a zoom, and grouped bars.}\label{fig:conv}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \ovlfig{fig_example_map}{../images/paper/fig_example_map_labels}
+  \caption{A path coloured by a value; the label of the box is written by \LaTeX.}\label{fig:map}
+\end{figure}
+
+% drawn at 0.6, included at the width save() printed (0.62)
+\begin{figure}[t]\centering
+  \includegraphics[width=0.62\columnwidth]{fig_example_topviews.pdf}
+  \caption{Top views of two objects.}\label{fig:topviews}
+\end{figure}
+
+\FloatBarrier
+\end{document}

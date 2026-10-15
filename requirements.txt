@@ -1,0 +1,8 @@
+# Python packages for the figure scripts:  pip install -r requirements.txt
+numpy
+matplotlib>=3.7
+seaborn            # only the map recipe of fig_examples.py (colour map rocket_r)
+
+# Not a Python package: a LaTeX installation (MiKTeX on Windows, TeX Live on Linux / macOS) with
+# `latex` and `dvipng` on the PATH and the packages amsmath, amssymb, bm. Without it the scripts
+# still run, with matplotlib's own font. `python check_setup.py` tells what is missing.

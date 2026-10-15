@@ -1,0 +1,22 @@
+# figures written by the scripts
+images/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# latex build files of the test sheets (the .tex files are tracked)
+latex/*.aux
+latex/*.log
+latex/*.out
+latex/*.spl
+latex/*.pdf
+latex/*.png
+
+# editors and os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
