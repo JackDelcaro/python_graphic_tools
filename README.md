@@ -1,20 +1,20 @@
 # Paper figure kit
 
-Matplotlib figures for papers in one consistent style: LaTeX text, a fixed palette assigned by role,
+Matplotlib figures for papers in one consistent style: LaTeX text, one colour per method kept across the paper,
 boxed panels, vector PDF output. It draws figures at the right size for **two-column** and
 **single-column (NeurIPS, ICLR)** documents with one flag, so that every figure of a paper looks like
 one set.
 
 <p align="center">
-  <img src="docs/paper_figure_guide_img/fig_example_tiles_single.png" alt="A row of tiles at full width, single-column layout" width="100%">
+  <img src="docs/paper_figure_guide_img/fig_example_tiles_single_white.png" alt="A row of tiles at full width, single-column layout" width="100%">
 </p>
 <p align="center">
-  <img src="docs/paper_figure_guide_img/fig_example_pair_single.png" alt="Two figures side by side, single-column layout" width="100%">
+  <img src="docs/paper_figure_guide_img/fig_example_pair_single_white.png" alt="Two figures side by side, single-column layout" width="100%">
 </p>
 <p align="center">
-  <img src="docs/paper_figure_guide_img/fig_example_snapshot.png" alt="Signal and residual, two-column layout" width="46%">
+  <img src="docs/paper_figure_guide_img/fig_example_snapshot_white.png" alt="Signal and residual, two-column layout" width="46%">
   &nbsp;
-  <img src="docs/paper_figure_guide_img/fig_example_convergence.png" alt="Curves with a zoom and grouped bars, two-column layout" width="46%">
+  <img src="docs/paper_figure_guide_img/fig_example_convergence_white.png" alt="Curves with a zoom, two-column layout" width="46%">
 </p>
 
 *Top: single-column layout (`--layout single`). Bottom: two-column layout (the default).*
@@ -24,13 +24,14 @@ one set.
 - **Two layouts, one script.** `--layout two` draws one column of a two-column paper (3.5 in),
   `--layout single` the text width of a single-column paper (5.5 in). Sizes come from `FIG_W` and
   `height(kind)`, never from inches in the figure code.
-- **A style module** (`paper_style.py`): fonts, palette by role (measured, proposed model, comparison
-  model, baseline), panels, legends, a transparency-ramp for distributions, and `save` for PDF, SVG and PNG.
+- **A style module** (`paper_style.py`): fonts, colour handling (one colour per method or data type, no fixed palette), panels,
+  legends, distributions as transparency ramps or patches, and `save` for PDF, SVG and PNG.
 - **Recipes you can copy** (`fig_examples.py`): signal and residual, metric with its distribution, a row
-  of tiles, two figures side by side, curves with a zoom, a path coloured by a value, top views.
-- **A guide** (`docs/paper_figure_guide.md`): the twenty rules, sizes, colours, the module explained,
+  of tiles, two figures side by side, curves with a zoom, a path coloured by a value, the legend styles.
+- **A guide** (`docs/paper_figure_guide.md`): the sixteen rules, sizes, colours, the module explained,
   the recipes with pictures, LaTeX, a checklist, and a section for single-column papers.
 - **LaTeX test sheets** (`latex/`): put every figure on a page at print size and judge it there.
+- **Example colour palettes** (`palettes/`): eight palettes with codes and a picture, as examples, not requirements.
 
 ## Quick start
 
@@ -43,8 +44,11 @@ python fig_template.py --layout single        # a new figure from data/example_h
 ```
 
 Figures are written to `images/paper/` (two-column) or `images/paper_single/` (single-column) as PDF
-(use this in LaTeX), SVG (for editing) and PNG (preview); the terminal prints the width to include each
-one at. The text of the figures is drawn with LaTeX so that it matches the paper: install MiKTeX or
+(use this in LaTeX), SVG (for editing) and PNG (preview, transparent background); the terminal prints the
+width to include each one at. A fourth file, `<name>_white.png`, is the PNG on an opaque white background:
+**it exists only for markdown files and viewers with a dark background** (it is what the pictures in this
+README and in the guide use, because the transparent ones have invisible labels on a dark theme). Do not use
+it in LaTeX or on slides. The text of the figures is drawn with LaTeX so that it matches the paper: install MiKTeX or
 TeX Live with `latex` and `dvipng` on the PATH. Without LaTeX the scripts still run, with matplotlib's
 own font, which is fine for a draft.
 
@@ -59,7 +63,7 @@ Copy `paper_style.py` and `zoom_plot.py` next to your figure scripts and start e
 
 1. Pick the layout of your paper (`--layout two` or `single`; another LaTeX class is one line in
    `LAYOUTS` in `paper_style.py`).
-2. Change the labels (`LAB_*`, `TAG_*`) to your own model and data-set names; keep the colour roles.
+2. Change the labels (`LAB_*`, `TAG_*`) to your own model and data-set names; keep one colour per method for the whole paper.
 3. Include the PDF at `\linewidth` (or at the width `save` printed):
 
 ```latex
@@ -72,7 +76,7 @@ Copy `paper_style.py` and `zoom_plot.py` next to your figure scripts and start e
 \end{figure}
 ```
 
-Side-by-side figures, text wrapped around a figure and labels written by LaTeX are in section 8 of the
+Side-by-side figures and text wrapped around a figure are in section 8 of the
 guide and in the two sheets in `latex/`.
 
 ## Use it with Claude
@@ -97,18 +101,19 @@ check_setup.py        checks Python, packages and LaTeX
 requirements.txt      numpy, matplotlib, seaborn (map recipe only)
 data/                 the data the template reads
 latex/                figure_sheet_two.tex, figure_sheet_single.tex
+palettes/             example colour palettes (not requirements) and their generator
 docs/                 paper_figure_guide.md and its pictures
 tools/                build_code.py, smoke_test.py (maintenance)
 SKILL.md              entry point for Claude
 CLAUDE.md             instructions for working on this repository
 ```
 
-## Rules to keep in mind (the guide has all twenty)
+## Rules to keep in mind (the guide has all sixteen)
 
 1. **Never write inches.** Sizes come from `FIG_W` and `height(kind)`, so the same script draws both layouts.
-2. **Colours are assigned by role, not cycled**: measured blue, proposed model orange, comparison model aqua, baseline dark grey dashed.
+2. **One colour per method or data type, the same in every figure of the paper**: chosen once from a palette you like (examples in `palettes/`), never cycled per figure. A light preference: measured data in blue.
 3. **Axis labels hold a symbol and a unit** (`$y$ [a.u.]`); no titles in the figure, the message goes into the caption.
-4. **One frameless legend above the panel**; its title names the data set.
+4. **One legend per figure at a house position**: above the panel (the default) or inside in a rounded box; panels that share colours get one legend above everything. Its title names the data set.
 5. **Do not shrink the text to fit.** Make the figure wider or split it. A single panel in a single-column paper is half width.
 6. **Print the numbers** the figure shows, so the text quotes the same data as the figure.
 7. **Include the PDF at `\linewidth`** and judge it on a LaTeX sheet at print size.

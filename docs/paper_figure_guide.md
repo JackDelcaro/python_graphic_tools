@@ -20,7 +20,7 @@ once draws both: it takes its sizes from `FIG_W` and `height(kind)` and never wr
 (section 5). What is specific to a single-column paper (half-width figures, rows of tiles, the page
 budget) is collected in [section 10](#10-single-column-papers-neurips-iclr).
 
-Contents: [1 rules](#1-the-look-in-twenty-rules) · [2 size](#2-size) ·
+Contents: [1 rules](#1-the-look-in-sixteen-rules) · [2 size](#2-size) ·
 [3 colours and lines](#3-colours-lines-markers) · [4 style module](#4-the-style-module) ·
 [5 script layout](#5-script-layout) · [6 recipes](#6-recipes) · [7 text](#7-text-in-figures) ·
 [8 LaTeX](#8-latex) · [9 checklist](#9-checklist-and-traps) ·
@@ -28,7 +28,7 @@ Contents: [1 rules](#1-the-look-in-twenty-rules) · [2 size](#2-size) ·
 
 ---------------------------------------------------------------------------------------------------
 
-## 1. The look in twenty rules
+## 1. The look in sixteen rules
 
 1. **Draw at twice the printed width, include at the printed width** (`\linewidth`). A full figure
    is drawn `FIG_W` wide: 7 in and included at `\columnwidth` (3.5 in) in a two-column paper, 11 in
@@ -41,94 +41,92 @@ Contents: [1 rules](#1-the-look-in-twenty-rules) · [2 size](#2-size) ·
    (`$y_{\mathrm{base}}$`, `$k-1$`).
 3. **Boxed panels**: four spines, ticks pointing inward on all four sides, hairline grid (0.5 pt,
    opacity 0.208) under the data, one ink colour `#262626` for spines, ticks and labels.
-4. **Fixed palette assigned by role**, never a colour cycle: measured is always blue, the proposed
-   model orange, the comparison model aqua, the baseline dark grey dashed.
+4. **One colour per method or data type, the same in every figure of the paper.** A method that is
+   lilac in one figure is lilac in all of them, so a caption can say "the lilac curve" and the reader
+   never has to learn a legend again. Which colours is your choice: the kit prescribes none (section 3
+   has example palettes). Choose them once, keep them in one table (the assignment block of
+   `paper_style.py`) and do not let matplotlib cycle colours from figure to figure. A light preference
+   only: measured data in blue. Lines differ in marker or dash as well, so a figure survives a
+   grey-scale print.
 5. **Stacked panels share the x axis** (`hspace = 0.04` to `0.05`, the panels nearly touch); only
    the bottom panel has tick labels, and the height ratios give the main panel the room. Two
    windows of the same signal are two columns of closed tiles (no broken axis).
-6. **One frameless legend above the top panel**; its title names the data set
-   (`training set` / `test set`).
+6. **One legend per figure, at a house position.** Above the panel, centred and frameless
+   (`legend_at(ax)`, the default: it never covers data), or inside the panel in a rounded box
+   (`legend_at(ax, "inside")`, only where the curves leave a corner free); `boxed=True` puts the
+   rounded box round the legend above too. Panels that share their colours get **one** legend above
+   everything (`legend_above_all(fig, axes)`), not one per panel. The title names the data set
+   (`training set` / `test set`). Recipe 6.8.
 7. **Axis labels hold a symbol and a unit** (`$y$ [a.u.]`, `forecast horizon $h$ [ms]`). The
    explanation goes into the caption, not into the figure.
 8. **Context as shading** (the forecast region in light grey), references and zero lines as thin
    muted lines.
-9. **Distributions as a transparency ramp** (`ramp_bands`): many nested percentile bands of one
-   colour, each with a low opacity, so the shading is opaque at the median and fades away from
-   it, with no visible band edges. Drawn as filled patches, so it is one connected surface along
-   x and stays vector in the PDF. **The shaded distribution and the line drawn on it must be the
-   same quantity**, otherwise the line does not run inside its shading: the example shades
-   the RMSE of every cycle and draws the RMSE of the whole test set, which lies in the middle of it.
-   Shading the individual absolute errors under an RMSE line does not work, because $|e|$ decays
-   from zero and the RMSE sits near its 85th percentile. Other variants (density, violins,
-   strips, per-cycle curves, spaghetti) were compared on real data; the ramp is the one used.
+9. **A distribution is drawn as a transparency ramp or as a patch** (recipe 6.2 shows both).
+   *Ramp* (`ramp_bands`): many nested percentile bands of one colour, each with a low opacity, so the
+   shading is opaque at the median and fades towards the tails, with no visible band edges. *Patch*
+   (`patch_bands`): one percentile range with a flat tint, by default 25-75 %: one patch, not several
+   overlapping ones; its edges are easy to read numbers from. Both are filled patches, so they are one
+   connected surface along x and stay vector in the PDF. **The shaded distribution and the line drawn
+   on it must be the same quantity**, otherwise the line does not run inside its shading: shade the
+   metric of each piece of the data set and draw the metric of the whole data set.
 10. **Transparent figure background, white panels, saved three times**: PDF (vector, for LaTeX),
-    SVG (vector, for editing) and PNG at 300 dpi (preview).
+    SVG (vector, for editing) and PNG at 300 dpi (preview). A fourth file, `<name>_white.png`, is the
+    same PNG on an opaque white background: **it exists only for markdown files and viewers with a
+    dark background** (README, GitHub dark theme, VS Code dark preview), where the dark labels of the
+    transparent files are invisible. Never use it in LaTeX or on slides.
 11. **Scripts save by default** (`Agg` backend); `--show` opens interactive windows with smart zoom,
     `--only <prefix>` draws a subset.
 12. **Every number a figure shows is printed to the terminal** by the same run, so the text and
     the captions quote numbers from the same data as the figure.
-13. **Figures of the same object share their references**: every figure of one cycle shows the same
-    cycle and measures time from the start of that cycle, so an instant can be found in all of
-    them (for example the same cycle of the test set).
-14. **Tiles of the same kind have the same width**: top views of different objects keep equal
-    axes and take their heights from the data aspect (recipe 6.6).
-15. **A figure that should take less space on the page** is drawn at `s * FIG_W` and included at
-    `s\linewidth` (`s = 0.6` for `fig_example_topviews`, `s = HALF = 0.48` for one of two figures side by
-    side). The ratio between the two is what sets the printed font size, so scaling both keeps the
-    text of the figure exactly as large as everywhere else; only the drawing gets smaller. Do not
-    shrink the font sizes instead.
-16. **A zoom shows what it zooms**: an inset always comes with the rectangle on the parent axes
+13. **A figure that should take less space on the page** is drawn at `s * FIG_W` and included at
+    `s\linewidth` (`s = HALF = 0.48` for one of two figures side by side). The ratio between the two
+    is what sets the printed font size, so scaling both keeps the text of the figure exactly as large
+    as everywhere else; only the drawing gets smaller. Do not shrink the font sizes instead.
+14. **A zoom shows what it zooms**: an inset always comes with the rectangle on the parent axes
     and the two lines that join them (`zoom_plot`, recipe 6.4). An inset alone leaves the reader
     guessing which part of the curve it is.
-17. **A label that names another figure is written by LaTeX**, not by matplotlib: the script
-    writes the position (`save_labels`), the document writes `Fig.~\ref{...}` on top of the
-    graphic (recipe 6.5, section 8), so the number follows the order of the paper.
-18. **Single-column: one panel is half width, a full-width figure is a row.** 5.5 in is wide for a
+15. **Single-column: one panel is half width, a full-width figure is a row.** 5.5 in is wide for a
     single curve. A one-panel figure is drawn at `HALF * FIG_W` and stands next to another figure
-    (or next to the text, `wrapfigure`); a figure that takes the full text width holds a row of two
-    or three tiles, or a long time series (recipes 6.7, 6.8; section 10).
-19. **Figures that stand side by side have the same height and the same build**: drawn with
+    (or next to the text, `wrapfigure`); a figure that takes the full text width holds a row of tiles
+    or a long time series (recipes 6.6, 6.7; section 10).
+16. **Figures that stand side by side have the same height and the same build**: drawn with
     `height("pair", HALF)`, one legend row (plus title) above the panel in both, one label line
     under it. Tight cropping then leaves them the same height and the two frames line up at print
-    size; a legend or label in only one of them makes them differ (recipe 6.8).
-20. **At most three tiles in a row at full width.** At 5.5 in a tile of a three-tile row is about
-    1.35 in wide when printed; a fourth tile leaves 1 in, too narrow for 8 pt tick labels. More panels
-    go into a second row (a 2 x 2 or 2 x 3 grid), not into a longer row.
+    size; a legend or label in only one of them makes them differ (recipe 6.7).
 
 ## 2. Size
 
 Width is `FIG_W` (7.0 in with `two`, 11.0 in with `single`), unless the figure is meant to take less
-space on the page (rule 15: `s * FIG_W`, included at `s\linewidth`). The height is a fraction of the
+space on the page (rule 13: `s * FIG_W`, included at `s\linewidth`). The height is a fraction of the
 width, taken from `height(kind)` so that the script draws both layouts. A full-width figure of a
 single-column paper is wider than it is tall, so its ratios are lower; the printed height in inches
 is given in brackets, the number to judge against the page:
 
 | figure type | `height(kind)` | `two` | `single` | layout | recipe |
 |---|---|---|---|---|---|
-| a metric vs. a parameter, with its distribution | `"curve"` | 0.50 (1.75 in) | 0.36 (2.0 in) | 1 panel, ramp + lines | `fig_example_bands` |
-| the same per model, as tiles | `"tiles"` | 0.45 (1.6 in) | 0.30 (1.65 in) | 1 row x 3 tiles, shared y, `wspace 0.08` | `fig_example_tiles` |
-| one panel: metric vs. horizon | `"curve"` | 0.45 to 0.56 | 0.34 to 0.40 | 1 panel | `fig_template` |
-| flat one-panel figure: parameter sweep | `"flat"` | 0.20 (0.7 in) | 0.14 (0.8 in) | 1 panel, one legend row, data set named inside | (none) |
-| signal + residual at one instant | `"snapshot"` | 0.78 (2.7 in) | 0.48 (2.6 in) | 2 stacked, ratios 2.0 : 1.15 | `fig_example_snapshot` |
-| geometry signal, signal, residual | `"stack3"` | 0.72 (2.5 in) | 0.44 (2.4 in) | 3 stacked, ratios 0.8 : 1.4 : 0.7 | (none) |
-| two windows of a signal, signal + residual | `"split"` | 0.55 (1.9 in) | 0.38 (2.1 in) | 2 rows x 2 columns of tiles, ratios 1.4 : 0.7, `wspace 0.1`; with a geometry signal (3 rows) use `"stack3"` | `fig_example_split` |
-| curves + bars | `"grid"` | 0.86 (3.0 in) | 0.64 (3.5 in) | 2 x 2, `hspace 0.62`, `wspace 0.3` | `fig_example_convergence` |
-| one of two figures side by side | `"pair"`, `s = HALF` | 0.80 | 0.74 (of its own width: 1.95 in) | 1 panel, 2 legend entries per row | recipe 6.8 |
-| top views | from the data aspect | | | 2 rows of equal width, equal axes, `0.6 * FIG_W` wide | `fig_example_topviews` |
-| map coloured by a value | from the data aspect | | | maps + colour-bar row | `fig_example_map` |
+| a metric vs. a parameter, with its distribution | `"curve"` | 0.40 (1.4 in) | 0.29 (1.6 in) | 1 panel, ramp + lines | `fig_example_bands` |
+| the same per model, as tiles; curves with a zoom | `"tiles"` | 0.36 (1.3 in) | 0.24 (1.3 in) | 1 row of tiles, shared y, `wspace 0.08` | `fig_example_tiles`, `fig_example_convergence` |
+| one panel: metric vs. horizon | `"curve"` | 0.36 to 0.45 | 0.27 to 0.32 | 1 panel | `fig_template` |
+| flat one-panel figure: parameter sweep | `"flat"` | 0.16 (0.6 in) | 0.11 (0.6 in) | 1 panel, one legend row, data set named inside | (none) |
+| signal + residual at one instant | `"snapshot"` | 0.62 (2.2 in) | 0.38 (2.1 in) | 2 stacked, ratios 2.0 : 1.15 | `fig_example_snapshot` |
+| geometry signal, signal, residual | `"stack3"` | 0.58 (2.0 in) | 0.35 (1.9 in) | 3 stacked, ratios 0.8 : 1.4 : 0.7 | (none) |
+| two windows of a signal, signal + residual | `"split"` | 0.44 (1.5 in) | 0.30 (1.65 in) | 2 rows x 2 columns of tiles, ratios 1.4 : 0.7, `wspace 0.1`; with a geometry signal (3 rows) use `"stack3"` | `fig_example_split` |
+| a 2 x 2 grid of panels | `"grid"` | 0.69 (2.4 in) | 0.51 (2.8 in) | gap between the rows about 1.2 in (x label, legend and titles sit in it), `wspace 0.3` | (none) |
+| one of two figures side by side | `"pair"`, `s = HALF` | 0.64 | 0.59 (of its own width: 1.6 in) | 1 panel, 2 legend entries per row | recipe 6.7 |
+| map coloured by a value | from the data aspect | | | map + vertical colour bar on the right | `fig_example_map` |
 
 A figure taller than about `0.9 * FIG_W` takes most of a column of a two-column paper; in a
-single-column paper keep a full-width figure under 3.5 in printed (`"grid"`), the page is 9 in high
+single-column paper keep a full-width figure under 3 in printed (`"grid"`), the page is 9 in high
 and the page limit counts figures (section 10). Shrink the secondary panels (residuals, geometry signals)
 first; keep the main panel readable.
 
-**Widths a figure is included at** (`s`, rule 15), as a fraction of `\linewidth`:
+**Widths a figure is included at** (`s`, rule 13), as a fraction of `\linewidth`:
 
 | `s` | `two` (3.5 in column) | `single` (5.5 in text width) | use |
 |---|---|---|---|
 | 1.0 | 3.5 in | 5.5 in | a full figure: rows of tiles, time series, grids |
-| `HALF` = 0.48 | 1.7 in (too small for the 8 / 7 / 6 pt text: do not) | 2.64 in | two figures side by side (recipe 6.8) |
-| 0.6 | 2.1 in | 3.3 in | top views, a map of a compact object; also `wrapfigure` |
+| `HALF` = 0.48 | 1.7 in (too small for the 8 / 7 / 6 pt text: do not) | 2.64 in | two figures side by side (recipe 6.7) |
+| 0.6 | 2.1 in | 3.3 in | a map of a compact object; also `wrapfigure` |
 
 The widths of the document classes this guide has been used with (measure a new class with
 `\typeout{\the\textwidth, \the\columnwidth, \the\linewidth}` in the preamble or the first line of the
@@ -142,23 +140,36 @@ body and read it in the log; a `\showthe` stops a non-interactive build):
 
 ## 3. Colours, lines, markers
 
-| role | colour | drawn as | z-order |
+**The kit prescribes no colours.** The one rule is rule 4: each method or data type keeps one colour in
+every figure of the paper. Which colours is your choice: take them from a palette you like.
+`palettes/paper_color_palette.md` shows eight example palettes with their hex and RGB codes and lighter
+and darker variants (regenerate with `python palettes/generate_paper_color_palette.py`); they are
+examples, not requirements, and [coolors.co](https://coolors.co/) is a good place to explore and generate
+more. Hints, none of them rules: solid colours for lines and markers, lighter tints for bands and areas;
+a marker or a dash on every line, so a figure survives a grey-scale print; and one light preference,
+measured data in blue.
+
+The examples of this folder use two colours, lilac `#AE78CC` and blue `#1D4E89` (the first and last colour
+of the first example palette), plus greys:
+
+| what | colour | drawn as | z-order |
 |---|---|---|---|
-| measured signal $y$, residual $r$ | `BLUE #2a78d6` | lw 2.0; markers `o` (ms 3) where the samples matter | 4 |
-| proposed model | `ORANGE #eb6834` | solid lw 2.0; marker `D` in metric plots | 6 |
-| comparison model | `AQUA #1baf7a` | solid lw 1.8; marker `o` in metric plots | 5 |
-| baseline model $y_{\mathrm{base}}$ | `INK_2 #52514e` | dashed `(0, (4, 2))`, lw 1.4 to 1.8; marker `s` | 3 |
-| commanded input $u$ | `YELLOW #eda100` | lw 1.8 | 3 |
-| previous cycles $k-2$, $k-1$ | `#bcd4f2`, `#7fabe6` (tints of blue) | lw 1.2, markers `o` ms 2.8; older = lighter | 2 |
-| geometry signal (curvature $\kappa$) | `VIOLET #4a3aa7` | lw 1.8, no zero line (it only clutters a curve that crosses zero) | 2 |
+| measured signal $y$, residual $r$ | `C_MEAS` = `BLUE #1D4E89` (the light preference) | lw 2.0; markers `o` (ms 3) where the samples matter | 4 |
+| proposed method | `C_PROPOSED` = `LILAC #AE78CC` | solid lw 2.0; marker `D` in metric plots | 6 |
+| comparison method | `C_COMPARE` = `BLUE` | solid lw 1.8; marker `o` in metric plots | 5 |
+| baseline model $y_{\mathrm{base}}$ | `C_BASE` = `INK_2 #52514e` | dashed `LS_BASE` `(0, (4, 2))`, lw 1.4 to 1.8; marker `s` | 3 |
+| previous cycles $k-2$, $k-1$ | `C_PREV`: tints of blue | lw 1.2, markers `o` ms 2.8; older = lighter | 2 |
+| any further method or signal | your choice | lw 1.8 | |
 | limits, zero lines | `MUTED #898781` | lw 0.9 to 1.0; a limit dotted `(0, (1, 1.5))` | 1 |
 | context shading (forecast region) | `NEUTRAL #c3c2b7` | `axvspan`, alpha 0.28 | 0 |
 | ordered series ($N_{\mathrm{prev}} = 1..5$, cycles in time) | `viridis` from 0.05 to 0.85 | dark = first | |
 | a magnitude along a path (error map) | seaborn `rocket_r` | always with a colour bar | |
-| free slots | `MAGENTA #e87ba4`, `GREEN #008300`, `RED #e34948` | | |
+
+Measured data and the comparison method are both blue here because no example figure shows both. A paper
+that shows both in one figure gives the comparison method another colour of its palette.
 
 * Keep the mapping in every figure of the paper, so captions stay short.
-* In a figure without models (for example a parameter sweep) the palette slots can label parameter
+* In a figure without methods (for example a parameter sweep) the palette colours can label parameter
   values.
 * A marker on a line gets a white edge: `mec="white", mew=0.6`, `ms=4.5`.
 * A reference value shared by several curves: dashed `(0, (6, 3))`.
@@ -180,7 +191,7 @@ paper_style.py - figure style for the paper, two-column or single-column.
 Draw at twice the printed width, include at the printed width (\\linewidth): FIG_W = 7 in for a
 column of a two-column paper (fonts 16/14/12 pt), 11 in for the text width of a single-column
 paper such as NeurIPS (fonts 18/16/14 pt). Printed, the text is nominally 8/7/6 pt (two) and 9/8/7 pt
-(single); section 9 says why the real size is a little larger. Fixed palette assigned by role. PDF (for LaTeX) + SVG + PNG (300 dpi) in images/paper/
+(single); section 9 says why the real size is a little larger. One colour per method, the same in every figure. PDF (for LaTeX) + SVG + PNG (300 dpi) in images/paper/
 (images/paper_single/ for --layout single), with a transparent figure background and white panels.
 
     from paper_style import *
@@ -233,10 +244,10 @@ LEGEND_FS, TICK_FS, LABEL_FS = LAYOUTS[LAYOUT]["fonts"]
 
 # height / width of a figure of each type (section 2); a wide single-column figure is lower
 ASPECT = {
-    "two":    dict(curve=0.50, tiles=0.45, flat=0.20, snapshot=0.78, stack3=0.72, split=0.55,
-                   grid=0.86, pair=0.80),
-    "single": dict(curve=0.36, tiles=0.30, flat=0.14, snapshot=0.48, stack3=0.44, split=0.38,
-                   grid=0.64, pair=0.74),
+    "two":    dict(curve=0.40, tiles=0.36, flat=0.16, snapshot=0.62, stack3=0.58, split=0.44,
+                   grid=0.69, pair=0.64),
+    "single": dict(curve=0.29, tiles=0.24, flat=0.11, snapshot=0.38, stack3=0.35, split=0.30,
+                   grid=0.51, pair=0.59),
 }
 
 
@@ -248,14 +259,17 @@ def height(kind, s=1.0):
 
 C_AX = "#262626"                              # spines, ticks, labels, grid
 
-# ---- palette: fixed slots, assigned by role, never cycled -----------------------------------
-BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
-MAGENTA, GREEN, VIOLET, RED = "#e87ba4", "#008300", "#4a3aa7", "#e34948"
-INK_2, MUTED, NEUTRAL = "#52514e", "#898781", "#c3c2b7"
-C_MEAS, C_PROPOSED, C_COMPARE, C_INPUT, C_BASE = BLUE, ORANGE, AQUA, YELLOW, INK_2
-C_PREV = ["#bcd4f2", "#7fabe6"]               # cycle k-2, cycle k-1 (tints of BLUE)
-LS_BASE = (0, (4, 2))                         # baseline model
-LS_REF = (0, (6, 3))                          # shared or global reference value
+# ---- colours: ONE colour per method or data type, the same in every figure of the paper ---------------
+# The kit prescribes none (example palettes: palettes/). Keep the choices of a paper in one table like this.
+BLUE, LILAC = "#1D4E89", "#AE78CC"                    # the two colours of the examples
+INK_2, MUTED, NEUTRAL = "#52514e", "#898781", "#c3c2b7"   # dark grey (baseline), limits and zero lines, context shading
+
+# The assignment used by the examples. A paper makes its own table once and keeps it in every figure.
+C_MEAS = BLUE                                         # a light preference: measured data in blue
+C_PROPOSED, C_COMPARE, C_BASE = LILAC, BLUE, INK_2
+C_PREV = ["#bbcadc", "#7795b8"]                       # cycle k-2, cycle k-1 (tints of BLUE: older = lighter)
+LS_BASE = (0, (4, 2))                                 # baseline model
+LS_REF = (0, (6, 3))                                  # shared or global reference value
 
 # ---- labels: one spelling in every figure ---------------------------------------------------
 LAB_PROPOSED, LAB_COMPARE = "proposed", "comparison"
@@ -320,14 +334,72 @@ def stacked(height, ratios, sharex=True, hspace=0.05, width=None):
 
 
 def legend_top(ax, handles=None, ncol=3, y=1.0, **kw):
-    """Frameless legend centred above the panel; title= names the data set."""
+    """Frameless legend centred above the panel, close to it; title= names the data set."""
     kw = dict(dict(loc="lower center", bbox_to_anchor=(0.5, y), ncol=ncol, frameon=False,
-                   fontsize=LEGEND_FS, handlelength=1.6, columnspacing=1.2,
-                   title_fontsize=LEGEND_FS + 1), **kw)
+                   fontsize=LEGEND_FS, handlelength=1.6, columnspacing=1.2, borderaxespad=0.1,
+                   borderpad=0.15, title_fontsize=LEGEND_FS + 1), **kw)
     leg = ax.legend(handles=handles, **kw) if handles is not None else ax.legend(**kw)
     if kw.get("title"):
         leg.get_title().set_color(C_AX)
     return leg
+
+
+LEGEND_ROUND = 0.3      # corner radius of a boxed legend, in units of the legend font size (matplotlib: 0.2)
+
+
+def _box(leg, boxed):
+    """A boxed legend: rounded corners (LEGEND_ROUND), thin light-grey edge, white face; or no frame."""
+    frame = leg.get_frame()
+    frame.set_visible(boxed)
+    if boxed:
+        frame.set_boxstyle("round", pad=0, rounding_size=LEGEND_ROUND)
+        frame.set_facecolor("white")
+        frame.set_edgecolor("0.75")
+        frame.set_linewidth(0.8)
+        frame.set_alpha(0.9)
+    return leg
+
+
+def legend_at(ax, where="above", boxed=None, ncol=None, handles=None, **kw):
+    """Legend of one panel at a house position (rule 6).
+    where="above"   centred above the panel, frameless: the default, it never covers data
+    where="inside"  lower right, in a rounded box, over the panel: only where the curves leave a corner free
+    boxed=None gives frameless above and boxed inside; True / False forces the rounded box on or off.
+    ncol defaults to 3 above (one row) and 1 inside (stacked); title= names the data set."""
+    boxed = (where == "inside") if boxed is None else boxed
+    if where == "above":
+        k = dict(borderpad=0.4, borderaxespad=0.3) if boxed else {}   # a frameless legend sits close
+        k.update(kw)
+        leg = legend_top(ax, handles, ncol=3 if ncol is None else ncol, frameon=boxed, **k)
+    elif where == "inside":
+        k = dict(loc="lower right", ncol=1 if ncol is None else ncol, frameon=boxed, fontsize=LEGEND_FS,
+                 handlelength=1.6, title_fontsize=LEGEND_FS + 1)
+        k.update(kw)
+        leg = ax.legend(handles=handles, **k) if handles is not None else ax.legend(**k)
+        if k.get("title"):
+            leg.get_title().set_color(C_AX)
+    else:
+        raise ValueError(f'where must be "above" or "inside", not {where!r}')
+    return _box(leg, boxed)
+
+
+def legend_above_all(fig, axes, boxed=False, ncol=3, rise=None, handles=None, labels=None, **kw):
+    """ONE legend above a row of panels that share their colours (rule 6), centred on the figure.
+    rise [in] is the distance above the top of the panels; the default sits just above the panel titles,
+    pass 0.06 if the panels have none. The entries are those of the first panel unless handles= and
+    labels= are given."""
+    if handles is None:
+        handles, labels = axes[0].get_legend_handles_labels()
+    if rise is None:                                         # just above the panel titles
+        rise = ((LEGEND_FS + 1) * 0.75 + 5) / 72 + 0.06
+    y = axes[0].get_position().y1 + rise / fig.get_figheight()
+    pad = dict(borderpad=0.4, borderaxespad=0.3) if boxed else dict(borderpad=0.15, borderaxespad=0.1)
+    kw = dict(dict(loc="lower center", bbox_to_anchor=(0.5, y), ncol=ncol, frameon=boxed, fontsize=LEGEND_FS,
+                   handlelength=1.6, columnspacing=1.2, title_fontsize=LEGEND_FS + 1, **pad), **kw)
+    leg = fig.legend(handles, labels, **kw)
+    if kw.get("title"):
+        leg.get_title().set_color(C_AX)
+    return _box(leg, boxed)
 
 
 def finish(fig, axes):
@@ -345,9 +417,12 @@ def finish(fig, axes):
 
 def save(fig, name):
     """PDF (for LaTeX) + SVG + PNG at 300 dpi; transparent figure background, white panels.
+    Also <name>_white.png: the same PNG on an opaque white background, ONLY for markdown files and
+    viewers with a dark background (README, GitHub dark theme, VS Code dark preview), where the dark
+    labels of the transparent files are invisible. Never use it in LaTeX or on slides.
     Nothing is written with --show. Prints the saved width: the figure prints at
     SCALE * saved width, so include it at that width as a fraction of \\linewidth (about the s it
-    was drawn for, rule 15)."""
+    was drawn for, rule 13)."""
     if ARGS.show:
         return
     OUT.mkdir(parents=True, exist_ok=True)
@@ -357,55 +432,54 @@ def save(fig, name):
         ax.patch.set_alpha(1.0)
     for ext, kw in (("pdf", {}), ("svg", {}), ("png", {"dpi": 300})):
         fig.savefig(OUT / f"{name}.{ext}", bbox_inches="tight", pad_inches=PAD_IN, **kw)
+    fig.patch.set_alpha(1.0)                                 # opaque white background: markdown files only
+    fig.patch.set_facecolor("white")
+    fig.savefig(OUT / f"{name}_white.png", bbox_inches="tight", pad_inches=PAD_IN, dpi=300)
     w_in = fig.get_tightbbox(fig.canvas.get_renderer()).width + 2 * PAD_IN
     plt.close(fig)
     print(f"  -> {OUT.name}/{name}.pdf  (saved {w_in:.2f} in = {w_in * SCALE / PRINT_W:.2f} "
           f"\\linewidth at scale {SCALE})")
 
 
-# ---- a distribution as a transparency ramp ---------------------------------------------------
+# ---- a distribution: transparency ramp or patches --------------------------------------------
 RAMP_Q = np.r_[0.5, np.arange(1.0, 100.0), 99.5]   # quantile grid the ramp is built from
 RAMP_ALPHA, RAMP_GAMMA = 0.38, 1.1                 # opacity at the median, fade towards the tails
 
 
 def ramp_bands(ax, x, Q, qs=RAMP_Q, color=C_PROPOSED, n_bands=40, alpha_max=RAMP_ALPHA,
                gamma=RAMP_GAMMA, zorder=1):
-    """Distribution as a transparency ramp made of nested filled bands (patches): one connected
-    surface along x, vector in the PDF, following the quantile curves exactly. Band k spans the
-    central range whose half-width in quantile units is t_k, so the opacities add up to
-    alpha_max * (1 - t^gamma): opaque at the median, transparent at the tails.
-    Q: quantile function of the distribution, shape (len(qs), len(x))."""
+    """Distribution as a transparency ramp: nested percentile ranges, opaque at the median, fading
+    towards the tails, no visible edges. One connected surface along x, vector in the PDF.
+    The ranges are drawn as rings that do not overlap, each with the opacity that the nested bands
+    would add up to there, 1 - (1 - alpha_max / n_bands)**k for k bands: every pixel is blended once, so
+    the colour is exact even in a PNG (forty faint layers stacked on each other drift in hue in 8-bit
+    blending: lilac turns grey). Band k spans the central range whose half-width in quantile units is
+    t_k = (1 - k / n_bands)**(1 / gamma). Q: quantile function, shape (len(qs), len(x))."""
     a = alpha_max / n_bands
-    for k in range(1, n_bands + 1):
-        t = (1.0 - k / n_bands) ** (1.0 / gamma)
-        lo_p, hi_p = 50.0 * (1.0 - t), 50.0 * (1.0 + t)
+
+    def bound(p):
+        return np.array([np.interp(p, qs, Q[:, j]) for j in range(Q.shape[1])])
+
+    t = [(1.0 - k / n_bands) ** (1.0 / gamma) for k in range(1, n_bands + 1)]      # t[-1] = 0: the median
+    edges = [(bound(50.0 * (1.0 - tk)), bound(50.0 * (1.0 + tk))) for tk in t]     # (lower, upper) of band k
+    for k in range(1, n_bands):                                  # ring k: band k without band k + 1
+        (lo_out, hi_out), (lo_in, hi_in) = edges[k - 1], edges[k]
+        alpha = 1.0 - (1.0 - a) ** k
+        ax.fill_between(x, lo_out, lo_in, color=color, alpha=alpha, lw=0, zorder=zorder)
+        ax.fill_between(x, hi_in, hi_out, color=color, alpha=alpha, lw=0, zorder=zorder)
+
+
+def patch_bands(ax, x, Q, qs=RAMP_Q, color=C_PROPOSED, levels=((25, 75, 0.30),), zorder=1):
+    """Distribution as a patch: one flat tint for one percentile range, by default 25-75 %. More ranges
+    can be passed as levels, (lower percentile, upper percentile, opacity), but one patch is easier to read
+    than overlapping ones. Q as in ramp_bands."""
+    for lo_p, hi_p, alpha in levels:
         lo = np.array([np.interp(lo_p, qs, Q[:, j]) for j in range(Q.shape[1])])
         hi = np.array([np.interp(hi_p, qs, Q[:, j]) for j in range(Q.shape[1])])
-        ax.fill_between(x, lo, hi, color=color, alpha=a, lw=0, zorder=zorder)
+        ax.fill_between(x, lo, hi, color=color, alpha=alpha, lw=0, zorder=zorder)
 
 
-PAD_IN = 0.02                                 # pad_inches of save(), needed by save_labels()
-
-
-def save_labels(fig, name, items):
-    """Write images/paper/<name>_labels.tex: the position of each label as a fraction of the
-    SAVED image, so that LaTeX can write the text on top of the included graphic (\\ovlfig /
-    \\ovltag macros, section 8). Use it for labels that must follow the document, e.g.
-    "Fig. 7" on the box that marks where another figure is taken.
-    items: (axes, x_data, y_data, latex_label, tikz_anchor)."""
-    if ARGS.show or not items:
-        return
-    fig.canvas.draw()
-    bb = fig.get_tightbbox(fig.canvas.get_renderer())                  # [in]
-    x0, y0 = bb.x0 - PAD_IN, bb.y0 - PAD_IN
-    w, h = bb.width + 2 * PAD_IN, bb.height + 2 * PAD_IN
-    out = [f"% {name}: label positions as a fraction of the image (generated, do not edit)"]
-    for ax, x, y, ref, anchor in items:
-        xd, yd = np.asarray(ax.transData.transform((x, y))) / fig.dpi
-        out.append(rf"\ovltag{{{(xd - x0) / w:.4f}}}{{{(yd - y0) / h:.4f}}}{{{anchor}}}{{{ref}}}")
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"{name}_labels.tex").write_text("\n".join(out) + "\n")
-    print(f"  -> {OUT.name}/{name}_labels.tex ({len(items)} labels)")
+PAD_IN = 0.02                                 # pad_inches of save()
 
 
 def show_if_requested():
@@ -678,7 +752,6 @@ usage:  python fig_example.py [--show] [--only fig_example_bands]
 """
 import numpy as np
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
 
 from paper_style import *          # style, palette, labels, helpers, ARGS
 from zoom_plot import zoom_plot    # inset + rectangle + connectors (recipe 6.4)
@@ -698,16 +771,21 @@ show_if_requested()
 ## 6. Recipes
 
 The recipes below run as they are (synthetic data in place of the results files); the pictures
-are their output. Recipes 6.1 to 6.6 show `--layout two` first and `--layout single` second;
-6.7 and 6.8 are the figures that belong to the single-column layout. Together with the skeleton imports above they are one script.
+are their output. Recipes 6.1 to 6.5 show `--layout two` first and `--layout single` second;
+6.6 to 6.8 are the figures that belong to the single-column layout. Together with the skeleton imports
+above they are one script.
+
+**The pictures in this guide are the `_white.png` files** (opaque white background): markdown viewers with a
+dark theme show the transparent PNGs with invisible labels. The transparent PNGs are in the same folder,
+and the `_white.png` is made only for markdown files, never for a paper.
 
 ### 6.1 Signal and residual at one instant
 
 Recipe `fig_example_snapshot`: shaded forecast region on both panels, vertical line at the present,
 measured samples with markers in the past, in-panel tags on a background patch.
 
-![snapshot](paper_figure_guide_img/fig_example_snapshot.png)
-![snapshot, single](paper_figure_guide_img/fig_example_snapshot_single.png)
+![snapshot](paper_figure_guide_img/fig_example_snapshot_white.png)
+![snapshot, single](paper_figure_guide_img/fig_example_snapshot_single_white.png)
 
 ```python
 def fig_example_snapshot(name):
@@ -736,7 +814,7 @@ def fig_example_snapshot(name):
     handles = [Line2D([], [], color=C_MEAS, lw=2.0, marker="o", ms=3, label=r"measured $y$"),
                Line2D([], [], color=C_BASE, lw=1.4, ls=LS_BASE, label=LAB_BASE),
                Line2D([], [], color=C_PROPOSED, lw=2.0, label=LAB_PROPOSED)]
-    legend_top(axy, handles, ncol=3, title=TAG_TEST)
+    legend_at(axy, handles=handles, ncol=3, title=TAG_TEST)
     # in-panel tags on a patch of the local background, so no curve runs through them
     for x, s, ha, fc in ((0.012, "past", "left", "white"), (0.988, "forecast", "right", "#eeeeeb")):
         axy.text(x, 0.035, s, transform=axy.transAxes, ha=ha, fontsize=LEGEND_FS, color=INK_2,
@@ -745,54 +823,68 @@ def fig_example_snapshot(name):
     save(fig, name)
 ```
 
-### 6.2 A metric with its distribution: transparency ramp
+### 6.2 A metric with its distribution: ramp or patches
 
-Recipe `fig_example_bands`. The line is the metric of the whole data set (here the RMSE
-of the test set versus the horizon); the shading is the distribution of the same metric over the
-pieces of the data set (here the RMSE of each of the 246 cycles), so the line runs inside its own
-shading. The ramp is built from `n_bands = 40` nested percentile bands of the same colour, each
-with opacity `alpha_max / n_bands`: they add up to an opacity `alpha_max * (1 - t^gamma)` at
-quantile distance `t` from the median, i.e. opaque in the middle, transparent at the tails, with
-no visible edges. Filled patches (`fill_between`), not an image: the surface is connected along x,
-stays vector in the PDF and has no column seams. The three models are drawn in one panel; where
-two ramps overlap the colours mix, which is acceptable here because the distributions are nested.
-Cut the x axis on the data (`ax.set_xlim(x[0], x[-1])`), otherwise the shading stops before the
-frame.
+Recipe `fig_example_bands` draws the same data twice, so that the two ways of showing a distribution can
+be compared. The line is the metric of the whole data set (here the RMSE of the test set versus the
+horizon); the shading is the distribution of the same metric over the pieces of the data set (here the
+RMSE of each of 250 cycles), so the line runs inside its own shading. The y axis is cut at 8: the upper
+tails of the wide distributions are clipped by the frame instead of setting the scale of the whole figure.
 
-![bands](paper_figure_guide_img/fig_example_bands.png)
-![bands, single](paper_figure_guide_img/fig_example_bands_single.png)
+*Transparency ramp* (`ramp_bands`, first pair of pictures): 40 nested percentile ranges of one colour,
+opaque at the median and fading to the tails with no visible edges; it shows the whole shape of the
+distribution. The ranges are drawn as rings that do not overlap, each with the opacity that the nested
+bands would add up to at that depth (`1 - (1 - alpha_max / n_bands)^k`), so every pixel is blended
+once and the colour is exact even in a PNG: forty faint layers stacked on each other drift in hue
+(lilac turns grey) because 8-bit blending rounds every layer.
+
+*Patch* (`patch_bands`, second pair): one flat tint for one percentile range, here 25-75 % (the middle
+half of the pieces). The edges can be read as numbers, and the picture holds up better in a grey-scale
+print. One patch, not several overlapping ones: nested ranges (for example a light 5-95 % under a
+darker 25-75 %) mix with the shading of the other methods and are hard to read.
+
+Both are filled patches (`fill_between`), not an image: the surface is connected along x, stays vector in
+the PDF and has no column seams. The three methods are drawn in one panel; where two shadings overlap the
+colours mix, which is acceptable for a few methods; with more, give each its own tile (recipe 6.6). Cut
+the x axis on the data (`ax.set_xlim(x[0], x[-1])`), otherwise the shading stops before the frame.
+
+![ramp](paper_figure_guide_img/fig_example_bands_ramp_white.png)
+![ramp, single](paper_figure_guide_img/fig_example_bands_ramp_single_white.png)
+
+![patches](paper_figure_guide_img/fig_example_bands_patch_white.png)
+![patches, single](paper_figure_guide_img/fig_example_bands_patch_single_white.png)
 
 ```python
 def fig_example_bands(name):
-    """A metric versus a parameter, with the distribution of that metric over the pieces of the
-    data set as a transparency ramp: one connected surface per model (nested filled bands,
-    opaque at the median piece, fading towards the extreme ones), the metric of the whole data
-    set on top. The shaded distribution and the line must be the same quantity, otherwise the
-    line does not run inside its shading."""
+    """A metric versus a parameter, with the distribution of that metric over the pieces of the data
+    set: <name>_ramp (a transparency ramp) and <name>_patch (a patch: 25-75 %),
+    the metric of the whole data set on top. The shaded distribution and the line must be the same
+    quantity, otherwise the line does not run inside its shading."""
     h = np.arange(0, 1051, 50)                               # forecast horizon [ms]
     rng = np.random.default_rng(0)
     rows = [(C_BASE, LS_BASE, "s", LAB_BASE, 6.6 + 0.2 * (1 - np.exp(-h / 150))),
             (C_COMPARE, "-", "o", LAB_COMPARE, 2.8 + 1.8 * (1 - np.exp(-h / 150))),
             (C_PROPOSED, "-", "D", LAB_PROPOSED, 0.4 + 4.0 * (1 - np.exp(-h / 90)))]
-    fig, (ax,) = stacked(height("curve"), [1.0])
-    y_max = 0.0
+    quantiles = []                                           # per method: quantiles over the pieces
     for c, ls, mk, lab, rmse in rows:
         # per-piece values: here 250 "cycles", each with its own level and noise
         per_piece = rmse * (1.0 + 0.35 * rng.standard_normal((250, 1))
                             + 0.10 * rng.standard_normal((250, h.size)))
-        Q = np.percentile(np.maximum(per_piece, 0.0), RAMP_Q, axis=0)
-        ramp_bands(ax, h, Q, color=c)                        # the distribution, as patches
-        y_max = max(y_max, Q[int(np.argmin(np.abs(RAMP_Q - 97.0)))].max())
-    for c, ls, mk, lab, rmse in rows:
-        ax.plot(h, rmse, color=c, ls=ls, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6,
-                zorder=4, label=lab)
-    ax.set_xlim(h[0], h[-1])                                 # cut on the data: no white margin
-    ax.set_ylim(0, 1.02 * y_max)
-    ax.set_xlabel(r"forecast horizon $h$ [ms]")
-    ax.set_ylabel(r"RMSE [a.u.]")
-    legend_top(ax, ncol=3, title=TAG_TEST)
-    finish(fig, [ax])
-    save(fig, name)
+        quantiles.append(np.percentile(np.maximum(per_piece, 0.0), RAMP_Q, axis=0))
+    for suffix, bands in (("ramp", ramp_bands), ("patch", patch_bands)):
+        fig, (ax,) = stacked(height("curve"), [1.0])
+        for (c, ls, mk, lab, rmse), Q in zip(rows, quantiles):
+            bands(ax, h, Q, color=c)                         # the distribution, as patches
+        for c, ls, mk, lab, rmse in rows:
+            ax.plot(h, rmse, color=c, ls=ls, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6,
+                    zorder=4, label=lab)
+        ax.set_xlim(h[0], h[-1])                             # cut on the data: no white margin
+        ax.set_ylim(0, 8)                                    # the tails above 8 are cut by the frame
+        ax.set_xlabel(r"forecast horizon $h$ [ms]")
+        ax.set_ylabel(r"RMSE [a.u.]")
+        legend_at(ax, ncol=3, title=TAG_TEST)
+        finish(fig, [ax])
+        save(fig, f"{name}_{suffix}")
 ```
 
 ### 6.3 Two windows of a signal side by side
@@ -803,8 +895,8 @@ shared along each row (tick labels only on the left), and the gap `wspace = 0.1`
 tiles. A broken axis (hidden inner spines and break marks) was tried and dropped: separate tiles
 read more clearly.
 
-![split](paper_figure_guide_img/fig_example_split.png)
-![split, single](paper_figure_guide_img/fig_example_split_single.png)
+![split](paper_figure_guide_img/fig_example_split_white.png)
+![split, single](paper_figure_guide_img/fig_example_split_single_white.png)
 
 ```python
 def fig_example_split(name):
@@ -816,7 +908,8 @@ def fig_example_split(name):
     ratios = [1.4, 0.7]                                      # signal, residual
     fig = plt.figure(figsize=(FIG_W, height("split")))
     gs = fig.add_gridspec(len(ratios), len(windows), height_ratios=ratios, hspace=0.07,
-                          wspace=0.1, width_ratios=[b - a for a, b, _ in windows])
+                          wspace=0.1, width_ratios=[b - a for a, b, _ in windows],
+                          bottom=0.65 / height("split"))   # 0.65 in: tick labels + the shared x label
     axes = [[None] * len(windows) for _ in ratios]
     for i in range(len(ratios)):
         for j in range(len(windows)):
@@ -838,36 +931,33 @@ def fig_example_split(name):
     axes[0][0].set_ylabel(r"$y$ [a.u.]")
     axes[1][0].set_ylabel(r"$r$ [a.u.]")
     fig.supxlabel(r"time within cycle [s]", fontsize=LABEL_FS, y=0.0)
-    h, l = axes[0][0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, 0.9), ncol=2, frameon=False,
-               fontsize=LEGEND_FS, title=TAG_TRAIN, title_fontsize=LEGEND_FS + 1)
+    legend_above_all(fig, axes[0], ncol=2, title=TAG_TRAIN)  # one legend above both tiles
     finish(fig, [ax for row in axes for ax in row])
     save(fig, name)
 ```
 
-### 6.4 Curves with a zoom, and grouped bars
+### 6.4 Curves with a zoom
 
 Recipe `fig_example_convergence`. When curves coincide at full scale, zoom on the converged part
 instead of adding a panel: `zoom_plot(ax, xlim=..., ylim=..., position=[l, b, w, h])` makes the
 inset, copies the curves into it, and marks the region with a rectangle and two connectors, so the
-reader sees which part is magnified (a bare `inset_axes` does not). Legends shared by a row of
-panels go into `fig.legend` above the row. Bars start at zero; `1.18 * max` leaves room above them.
+reader sees which part is magnified (a bare `inset_axes` does not). The curves of an ordered series (here
+the number of previous cycles) use `viridis` (dark = first), and one legend above the row
+(`legend_above_all`) names them for both panels.
 
-![convergence](paper_figure_guide_img/fig_example_convergence.png)
-![convergence, single](paper_figure_guide_img/fig_example_convergence_single.png)
+![convergence](paper_figure_guide_img/fig_example_convergence_white.png)
+![convergence, single](paper_figure_guide_img/fig_example_convergence_single_white.png)
 
 ```python
 def fig_example_convergence(name):
-    """Top: loss curves of an ordered series, with an inset on the converged part.
-    Bottom: grouped bars of one number per order and model."""
+    """Loss curves of an ordered series, one panel per method, with an inset on the converged part."""
     ns = [1, 2, 3, 4, 5]
     cols = viridis_colours(ns)
     steps = np.arange(400)
     final = {LAB_PROPOSED: {n: 3.55 - 0.01 * n for n in ns}, LAB_COMPARE: {n: 3.8 + 0.21 * n for n in ns}}
-    fig = plt.figure(figsize=(FIG_W, height("grid")))
-    gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 0.95], hspace=0.62, wspace=0.3)
+    fig = plt.figure(figsize=(FIG_W, height("tiles")))
+    gs = fig.add_gridspec(1, 2, wspace=0.3)
     axc = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
-    axb = [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
     for ax, lab in zip(axc, (LAB_PROPOSED, LAB_COMPARE)):
         for n in ns:
             loss = final[lab][n] + (7.5 - final[lab][n]) * np.exp(-steps / 40)
@@ -883,52 +973,27 @@ def fig_example_convergence(name):
     for ln in zm.child.lines:
         ln.set_linewidth(1.6)
     axc[0].set_ylabel(r"training loss [a.u.]")
-    up = 0.34 / fig.get_figheight()               # 0.34 in above a panel: clear of its title
-    h, l = axc[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, axc[0].get_position().y1 + up),
-               ncol=5, frameon=False, fontsize=LEGEND_FS, columnspacing=0.9, handlelength=1.3,
-               title="training set, same initial hyperparameters", title_fontsize=LEGEND_FS + 1)
-    x, w = np.arange(len(ns)), 0.38
-    for ax, tag in zip(axb, (TAG_TRAIN, TAG_TEST)):
-        comp = np.array([final[LAB_COMPARE][n] for n in ns])
-        prop = np.array([final[LAB_PROPOSED][n] for n in ns])
-        ax.bar(x - w / 2, comp, w, color=C_COMPARE, label=LAB_COMPARE, zorder=3)
-        ax.bar(x + w / 2, prop, w, color=C_PROPOSED, label=LAB_PROPOSED, zorder=3)
-        ax.set_xticks(x, [str(n) for n in ns])
-        ax.tick_params(axis="x", which="minor", bottom=False, top=False)
-        ax.set_xlabel(r"previous cycles $N_{\mathrm{prev}}$")
-        ax.set_ylabel(r"loss [a.u.]")
-        ax.set_ylim(0, 1.18 * max(comp.max(), prop.max()))  # bars start at zero
-        ax.set_title(tag, fontsize=LEGEND_FS + 1, color=C_AX, pad=5)
-    h, l = axb[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, axb[0].get_position().y1 + up),
-               ncol=2, frameon=False, fontsize=LEGEND_FS)
-    finish(fig, axc + axb)
+    legend_above_all(fig, axc, ncol=5, columnspacing=0.9, handlelength=1.3,
+                     title="training set, same initial hyperparameters")
+    finish(fig, axc)
     save(fig, name)
 ```
 
 ### 6.5 Path coloured by a value
 
-Recipe `fig_example_map`: a `LineCollection` coloured by the value, equal aspect, panel height
-from the data aspect, horizontal colour bar in its own grid row. The colour scale is capped at the
-98th percentile (`extend="max"`) so a few peaks do not wash out the rest. For two maps with the same
-scale, use one `Normalize` for both and one colour bar.
+Recipe `fig_example_map`: a `LineCollection` coloured by the value, equal aspect, panel height from the
+data aspect, and a normal vertical colour bar on the right. The map and the colour bar are placed with
+margins in inches, so the colour bar is exactly as tall as the map. The colour scale covers the range of
+the data; if a few peaks wash out the rest, cap it (`vmax`) and say so in the caption. For two maps with
+the same scale, use one `Normalize` for both and one colour bar. A colour map is only ever drawn with its
+colour bar.
 
-The rectangles mark the pieces of path that other figures show in the time domain (first solid,
-the following ones dashed), and `save_labels` writes their labels into
-`images/paper/<name>_labels.tex`; the document puts `Fig.~\ref{...}` there with `\ovlfig`
-(section 8), so the numbers stay right when the figure order changes. The anchor (`south`,
-`north`, `west`, `east`) says on which side of the box the label sits, in screen sense — with an
-inverted y axis (image-style coordinates) `south` is still above the box.
-
-![map](paper_figure_guide_img/fig_example_map.png)
-![map, single](paper_figure_guide_img/fig_example_map_single.png)
+![map](paper_figure_guide_img/fig_example_map_white.png)
+![map, single](paper_figure_guide_img/fig_example_map_single_white.png)
 
 ```python
-def fig_example_map(name, boxes=((1.0, 2.2, "fig:window", "north"),)):
-    """A path in the plane, coloured by a value, with a colour bar. `boxes` are
-    windows of the path (here in the parameter s) marked by a rectangle; their labels are
-    written by LaTeX from <name>_labels.tex, so they follow the numbering of the document."""
+def fig_example_map(name):
+    """A path in the plane, coloured by a value, with a vertical colour bar on the right."""
     import seaborn as sns
     from matplotlib.collections import LineCollection
     from matplotlib.colors import Normalize
@@ -938,11 +1003,15 @@ def fig_example_map(name, boxes=((1.0, 2.2, "fig:window", "north"),)):
     pts = np.column_stack([X, Y])
     segs = np.stack([pts[:-1], pts[1:]], axis=1)
     cmap = sns.color_palette("rocket_r", as_cmap=True)
-    norm = Normalize(0, float(np.percentile(err, 98)))       # cap at p98: colour bar "extend"
-    panel_h = (FIG_W - 1.0) * (np.ptp(Y) + 40) / (np.ptp(X) + 40)   # height from the data aspect
-    fig = plt.figure(figsize=(FIG_W, panel_h + 1.3))         # FIG_W - 1 in: the width of the panel
-    gs = fig.add_gridspec(2, 1, height_ratios=[panel_h, 0.16], hspace=0.5)
-    ax, cax = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
+    norm = Normalize(0, float(err.max()))                    # the colour bar covers the data range
+    left, right, bottom, top = 1.0, 0.1, 0.8, 0.4            # margins [in]: y label, colour-bar label, x label, title
+    gap, cb_w, cb_labels = 0.15, 0.22, 0.85                  # map - colour bar gap, colour bar width, its labels [in]
+    map_w = FIG_W - left - gap - cb_w - cb_labels - right
+    map_h = map_w * (np.ptp(Y) + 40) / (np.ptp(X) + 40)      # height from the data aspect
+    W, H = FIG_W, bottom + map_h + top
+    fig = plt.figure(figsize=(W, H))
+    ax = fig.add_axes([left / W, bottom / H, map_w / W, map_h / H])
+    cax = fig.add_axes([(left + map_w + gap) / W, bottom / H, cb_w / W, map_h / H])
     lc = LineCollection(segs, cmap=cmap, norm=norm, linewidth=3.4, capstyle="round")
     lc.set_array(0.5 * (err[:-1] + err[1:]))
     ax.add_collection(lc)
@@ -952,84 +1021,24 @@ def fig_example_map(name, boxes=((1.0, 2.2, "fig:window", "north"),)):
     ax.set_xlabel(r"$x_1$ [mm]")
     ax.set_ylabel(r"$x_2$ [mm]")
     ax.set_title(TAG_TEST, loc="left", fontsize=LEGEND_FS + 1, color=C_AX, pad=5)
-    cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax,
-                      orientation="horizontal", extend="max")
+    cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax)
     cb.set_label(r"absolute error [a.u.]", fontsize=LABEL_FS)
     cb.ax.tick_params(labelsize=TICK_FS, direction="in", colors=C_AX)
-    tags, pad = [], 12.0                                     # [mm] around the marked path
-    for j, (s_a, s_b, ref, anchor) in enumerate(boxes):
-        m = (s >= s_a) & (s <= s_b)
-        x0, x1 = X[m].min() - pad, X[m].max() + pad
-        y0, y1 = Y[m].min() - pad, Y[m].max() + pad
-        ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, fill=False, edgecolor=C_AX, lw=1.1,
-                               ls="-" if j == 0 else (0, (4, 2)), zorder=6))
-        off = 6.0                                            # label clear of the box
-        y_top, y_bot = (y0, y1) if ax.yaxis_inverted() else (y1, y0)
-        up, down = (-off, off) if ax.yaxis_inverted() else (off, -off)
-        cx, cy = 0.5 * (x0 + x1), 0.5 * (y0 + y1)
-        pt = {"south": (cx, y_top + up), "north": (cx, y_bot + down),
-              "west": (x1 + off, cy), "east": (x0 - off, cy)}[anchor]
-        tags.append((ax, pt[0], pt[1], ref, anchor))
     finish(fig, [ax])
-    save_labels(fig, name, tags)
     save(fig, name)
 ```
 
-### 6.6 Top views of different objects with tiles of the same width
-
-Recipe `fig_example_topviews`. With `set_aspect("equal")` the default `adjustable="box"` shrinks every
-tile to the aspect of its data, so a long object gets a wide tile and a compact one a narrow tile.
-Instead, give each tile the height ratio of its data (vertical span / horizontal span), compute
-the figure height that makes the tiles exactly as wide as the grid, and use
-`adjustable="datalim"`, which keeps the tile and adapts the limits.
-
-The function draws at `w_rel * FIG_W` (0.6 here, rule 15); include it at
-`0.6\linewidth`.
-
-![topviews](paper_figure_guide_img/fig_example_topviews.png)
-![topviews, single](paper_figure_guide_img/fig_example_topviews_single.png)
-
-```python
-def fig_example_topviews(name, w_rel=0.6):
-    """Top views of two objects of different shape, equal axes, tiles of the same width. Drawn at
-    w_rel * FIG_W and included at w_rel * \\linewidth (rule 15), 0.6 here."""
-    s = np.linspace(0, 2 * np.pi, 600)
-    shapes = [("training set", 800 * np.cos(s), 300 * np.sin(s)),
-              ("test set", 480 * np.cos(s), 230 * np.sin(s))]
-    pad = 30.0
-    lims = [((X.min() - pad, X.max() + pad), (Y.min() - pad, Y.max() + pad)) for _, X, Y in shapes]
-    ratios = [(lv[1] - lv[0]) / (lh[1] - lh[0]) for lh, lv in lims]   # height / width of the data
-    hspace, left, right, bottom, top = 0.3, 0.14, 0.98, 0.1, 0.94
-    W = w_rel * FIG_W
-    fig_h = W * (right - left) * (sum(ratios) + hspace * np.mean(ratios)) / (top - bottom)
-    fig = plt.figure(figsize=(W, fig_h))
-    gs = fig.add_gridspec(len(shapes), 1, height_ratios=ratios, hspace=hspace, left=left,
-                          right=right, bottom=bottom, top=top)
-    axes = [fig.add_subplot(gs[i]) for i in range(len(shapes))]
-    for ax, (tag, X, Y), (lh, lv) in zip(axes, shapes, lims):
-        ax.plot(X, Y, color=BLUE, lw=1.4)
-        ax.set_xlim(*lh)
-        ax.set_ylim(*lv)
-        ax.set_aspect("equal", adjustable="datalim")         # keep the tile width, adapt limits
-        ax.set_ylabel(r"$x_2$ [mm]")
-        ax.set_title(tag, loc="left", fontsize=LEGEND_FS + 2, color=C_AX, pad=4)
-    axes[-1].set_xlabel(r"$x_1$ [mm]")
-    fig.align_ylabels(axes)
-    finish(fig, axes)
-    save(fig, name)
-```
-
-### 6.7 A row of tiles at full width
+### 6.6 A row of tiles at full width
 
 Recipe `fig_example_tiles`, the typical full-width figure of a single-column paper
-(rule 18): one tile per model, the same y axis (labels on the first tile only), the distribution of
-the metric as a transparency ramp inside each tile, so no two fans overlap (trap: overlaid
-transparent fans turn muddy). Three tiles are the most a 5.5 in text width holds (rule 20); each
-is about 1.35 in wide when printed. The data set is named by an in-panel tag on a patch of the
-background colour; the model names are the tile titles. Ticks stay away from the right limit
-(0, 400, 800 on a 0-1050 ms axis), otherwise the "1000" of one tile touches the "0" of the next.
+(rule 15): one tile per model, the same y axis (labels on the first tile only), the distribution of
+the metric as a transparency ramp inside each tile, so no two shadings overlap (trap: overlaid
+transparent fans turn muddy). The y axis is cut at 8, as in recipe 6.2. The data set is named by an
+in-panel tag on a patch of the background colour; the model names are the tile titles. Ticks stay away
+from the right limit (0, 400, 800 on a 0-1050 ms axis), otherwise the "1000" of one tile touches the
+"0" of the next.
 
-![tiles](paper_figure_guide_img/fig_example_tiles_single.png)
+![tiles](paper_figure_guide_img/fig_example_tiles_single_white.png)
 
 ```python
 def fig_example_tiles(name):
@@ -1042,7 +1051,7 @@ def fig_example_tiles(name):
             (C_PROPOSED, "D", LAB_PROPOSED, 0.4 + 4.0 * (1 - np.exp(-h / 90)))]
     fig = plt.figure(figsize=(FIG_W, height("tiles")))
     gs = fig.add_gridspec(1, len(rows), wspace=0.08)
-    axes, y_max = [], 0.0
+    axes = []
     for j, (c, mk, lab, rmse) in enumerate(rows):
         ax = fig.add_subplot(gs[j], sharey=axes[0] if j else None)
         per_piece = rmse * (1.0 + 0.35 * rng.standard_normal((250, 1))
@@ -1050,7 +1059,6 @@ def fig_example_tiles(name):
         Q = np.percentile(np.maximum(per_piece, 0.0), RAMP_Q, axis=0)
         ramp_bands(ax, h, Q, color=c)
         ax.plot(h, rmse, color=c, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6, zorder=4)
-        y_max = max(y_max, Q[int(np.argmin(np.abs(RAMP_Q - 97.0)))].max())
         ax.set_xlim(h[0], h[-1])
         ax.set_xticks([0, 400, 800])                         # no tick at the right limit
         ax.set_xlabel(r"horizon $h$ [ms]")
@@ -1058,8 +1066,8 @@ def fig_example_tiles(name):
         if j:
             ax.tick_params(labelleft=False)                  # shared y: labels on the left only
         axes.append(ax)
-    axes[0].set_ylim(0, 1.02 * y_max)
-    axes[0].set_yticks([0, 5, 10])                           # short labels: "0.0" would touch the x "0"
+    axes[0].set_ylim(0, 8)                                   # the tails above 8 are cut by the frame
+    axes[0].set_yticks([0, 4, 8])                            # short labels: "0.0" would touch the x "0"
     axes[0].set_ylabel(r"RMSE [a.u.]")
     axes[0].text(0.05, 0.05, TAG_TEST, transform=axes[0].transAxes, fontsize=LEGEND_FS, color=INK_2,
                  zorder=10, bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.9))
@@ -1067,16 +1075,16 @@ def fig_example_tiles(name):
     save(fig, name)
 ```
 
-### 6.8 Two figures side by side
+### 6.7 Two figures side by side
 
-Pattern of the half-width pair of a single-column paper (rule 18, 19): each figure is drawn at
+Pattern of the half-width pair of a single-column paper (rules 15 and 16): each figure is drawn at
 `HALF * FIG_W` (5.28 in with `single`), set side by side with `\hfill` and `subcaption` (section 8).
 So that the two frames line up at print size, both get the same height (`height("pair", HALF)`)
 and the same build: one legend (title and one row) above the panel and one label line under it
-(rule 19). At half width a legend holds two entries per row (`ncol=2`); a third goes into a second
+(rule 16). At half width a legend holds two entries per row (`ncol=2`); a third goes into a second
 row, in both figures. The picture shows the two saved files as `\hfill` places them.
 
-![pair](paper_figure_guide_img/fig_example_pair_single.png)
+![pair](paper_figure_guide_img/fig_example_pair_single_white.png)
 
 ```python
 def fig_example_pair(name):
@@ -1094,7 +1102,7 @@ def fig_example_pair(name):
     ax.set_ylim(0, 6)
     ax.set_xlabel(r"forecast horizon $h$ [ms]")
     ax.set_ylabel(r"RMSE [a.u.]")
-    legend_top(ax, ncol=2, title=TAG_TEST)
+    legend_at(ax, ncol=2, title=TAG_TEST)
     finish(fig, [ax])
     save(fig, f"{name}_a")
     # (b) the same frame: grouped bars per number of previous cycles
@@ -1107,9 +1115,72 @@ def fig_example_pair(name):
     ax.set_ylim(0, 6)
     ax.set_xlabel(r"previous cycles $N_{\mathrm{prev}}$")
     ax.set_ylabel(r"loss [a.u.]")
-    legend_top(ax, ncol=2, title=TAG_TEST)
+    legend_at(ax, ncol=2, title=TAG_TEST)
     finish(fig, [ax])
     save(fig, f"{name}_b")
+```
+
+### 6.8 Legends
+
+Three ways to place the legend of one panel, and one rule for a row of tiles. `legend_at(ax)` (`"above"`)
+centres a frameless legend above the panel: it never covers data and is the default.
+`legend_at(ax, "inside")` puts a rounded box in the lower right corner, over the panel: use it only where
+the curves leave that corner free. `boxed=True` puts the same rounded box round the legend above. The
+corner radius is `LEGEND_ROUND` (0.3 of the legend font size; matplotlib's own box is 0.2). The picture
+shows, left to right: inside, above, above and boxed.
+
+![legends: inside, above, above and boxed](paper_figure_guide_img/fig_example_legends_panels_single_white.png)
+
+When several panels share their colours, one legend above everything says it once:
+`legend_above_all(fig, axes)`. Its `rise` is the distance above the panels in inches (the default sits just above
+the panel titles, 0.06 if there are none). A legend repeated in every panel only adds noise and is not used. The
+second picture is the same row with `boxed=True`.
+
+![a row of tiles, one legend above everything](paper_figure_guide_img/fig_example_legends_row_single_white.png)
+![the same, boxed](paper_figure_guide_img/fig_example_legends_row_boxed_single_white.png)
+
+```python
+def fig_example_legends(name):
+    """The legend styles of the kit: <name>_inside, <name>_above, <name>_above_boxed (one panel each) and
+    <name>_row, <name>_row_boxed (a row of tiles that share their colours, one legend above all)."""
+    h = np.arange(0, 1051, 50)                               # forecast horizon [ms]
+    series = [(C_BASE, LS_BASE, "s", "baseline", 6.6 + 0.2 * (1 - np.exp(-h / 150))),
+              (C_COMPARE, "-", "o", "comparison", 2.8 + 1.8 * (1 - np.exp(-h / 150))),
+              (C_PROPOSED, "-", "D", "proposed", 0.4 + 4.0 * (1 - np.exp(-h / 90)))]
+    s, kind = (HALF, "pair") if LAYOUT == "single" else (1.0, "curve")   # one panel: rule 15
+
+    def draw(ax, k=1.0):
+        for c, ls, mk, lab, y in series:
+            ax.plot(h, k * y, color=c, ls=ls, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6, label=lab)
+        ax.set_xlim(h[0], h[-1])
+        ax.set_ylim(0, 8)
+        ax.set_xlabel(r"horizon $h$ [ms]")
+
+    for suffix, where, boxed in (("inside", "inside", None), ("above", "above", None),
+                                 ("above_boxed", "above", True)):
+        fig, (ax,) = stacked(height(kind, s), [1.0], width=s * FIG_W)
+        draw(ax)
+        ax.set_ylabel(r"RMSE [a.u.]")
+        legend_at(ax, where, boxed)
+        finish(fig, [ax])
+        save(fig, f"{name}_{suffix}")
+
+    for suffix, boxed in (("row", False), ("row_boxed", True)):
+        fig = plt.figure(figsize=(FIG_W, height("tiles")))
+        gs = fig.add_gridspec(1, 3, wspace=0.08)
+        axes = []
+        for j, (title, k) in enumerate((("training set", 0.85), ("validation set", 1.0), (TAG_TEST, 1.12))):
+            ax = fig.add_subplot(gs[j], sharey=axes[0] if j else None)
+            draw(ax, k)
+            ax.set_xticks([0, 400, 800])                     # no tick at the right limit
+            ax.set_title(title, fontsize=LEGEND_FS + 1, color=C_AX, pad=5)
+            if j:
+                ax.tick_params(labelleft=False)              # shared y: labels on the left only
+            axes.append(ax)
+        axes[0].set_ylabel(r"RMSE [a.u.]")
+        legend_above_all(fig, axes, boxed=boxed)             # one legend, above everything
+        finish(fig, axes)
+        save(fig, f"{name}_{suffix}")
 ```
 
 ## 7. Text in figures
@@ -1128,6 +1199,8 @@ def fig_example_pair(name):
 * **Tags inside a panel** ("past", "forecast") sit on a patch of the local background colour
   (`bbox=dict(boxstyle="square,pad=0.15", fc=..., ec="none", alpha=0.9)`) so no curve runs through
   them.
+* **Legends** are placed with `legend_at` and `legend_above_all` (rule 6, recipe 6.8), not with
+  `ax.legend()` and matplotlib's defaults.
 * **Panel letters** of two figures side by side ((a), (b)) are written by `\subcaption`, not
   drawn into the graphic.
 
@@ -1149,14 +1222,14 @@ inside a `subfigure` it is the width of that subfigure, so the same line is righ
 \end{figure}
 ```
 
-A figure that should take less space keeps its own scale (rule 15); include it at the fraction
+A figure that should take less space keeps its own scale (rule 13); include it at the fraction
 `save` prints for it, in practice the `s` it was drawn for:
 
 ```latex
-\includegraphics[width=0.6\linewidth]{fig_example_topviews.pdf}     % drawn at 0.6 * FIG_W
+\includegraphics[width=0.48\linewidth]{fig_example_pair_a.pdf}     % drawn at HALF * FIG_W
 ```
 
-*Single-column:* two figures side by side (recipe 6.8, rules 18 and 19), each drawn at
+*Single-column:* two figures side by side (recipe 6.7, rules 15 and 16), each drawn at
 `HALF * FIG_W`, with `subcaption`; `[t]` aligns their tops:
 
 ```latex
@@ -1181,35 +1254,15 @@ A figure that should take less space keeps its own scale (rule 15); include it a
 ```latex
 \usepackage{wrapfig}
 
-\begin{wrapfigure}{r}{0.58\linewidth}
+\begin{wrapfigure}{r}{0.48\linewidth}
   \centering
-  \includegraphics[width=0.58\linewidth]{fig_example_topviews.pdf}
-  \caption{Top views of two objects.}
+  \includegraphics[width=0.48\linewidth]{fig_example_pair_a.pdf}
+  \caption{RMSE versus horizon.}
 \end{wrapfigure}
 ```
 
-Labels written by LaTeX on top of a figure (rule 17, recipe 6.5). `<name>_labels.tex` is written by
-the plot script and holds one `\ovltag{x}{y}{anchor}{label}` per label, with `x` and `y` as a
-fraction of the image. `\ovlfig` takes the width as an optional first argument (`\ovlfig[0.6]{...}`):
-
-```latex
-\usepackage{tikz}
-\newcommand{\ovltag}[4]{\node[anchor=#3, inner sep=1.2pt, font=\scriptsize, fill=white,
-  fill opacity=0.78, text opacity=1] at (#1,#2) {Fig.~\ref{#4}};}
-\newcommand{\ovlfig}[3][1]{%
-  \begin{tikzpicture}
-    \node[anchor=south west,inner sep=0] (im) {\includegraphics[width=#1\linewidth]{#2.pdf}};
-    \begin{scope}[x={(im.south east)},y={(im.north west)}]\input{#3}\end{scope}
-  \end{tikzpicture}}
-
-\begin{figure}[t]\centering
-  \ovlfig{fig_example_map}{../images/paper/fig_example_map_labels}
-  \caption{... The boxes mark the pieces of path shown by the figures named in them.}
-  \label{fig:map}
-\end{figure}
-```
-
-* Always include the PDF (vector); the SVG is for editing (e.g. Inkscape), the PNG for previews.
+* Always include the PDF (vector); the SVG is for editing (e.g. Inkscape), the PNG for previews. The
+  `_white.png` is for markdown files and dark viewers only, never for LaTeX.
 * Place figures with `[t]`; put `\FloatBarrier` (package `placeins`) before the bibliography so no
   figure floats past it.
 * Judge figures at print size: `latex/figure_sheet_two.tex` (elsarticle `5p`) and
@@ -1223,16 +1276,15 @@ fraction of the image. `\ovlfig` takes the width as an optional first argument (
 
 * [ ] Looked at the figure in the compiled preview at print size: no legend over data, no clipped
       labels, tick labels readable, legend order = drawing importance.
-* [ ] Colours, dashes and labels follow the role table; data set named.
+* [ ] Each method has the same colour as in every other figure of the paper; data set named.
 * [ ] Numbers quoted in the text come from the terminal output of the same run.
 * [ ] PDF, SVG and PNG (300 dpi) written to `images/paper/`; figure background transparent, panels
-      white.
-* [ ] Every zoom has its rectangle and connectors; every box that stands for another figure has its
-      label file, and the document was compiled twice so the numbers in it are right.
+      white. The extra `<name>_white.png` (white background) is for markdown files only.
+* [ ] Every zoom has its rectangle and connectors.
 * [ ] The layout of the figures is the layout of the paper (`--layout`, folder `images/paper/` or
       `images/paper_single/`), and each figure is included at the width `save` printed for it.
 * [ ] Two figures side by side: same height, same legend rows, `subfigure[t]`, judged together
-      at print size (rule 19).
+      at print size (rule 16).
 
 Traps met while making the paper figures:
 
@@ -1245,8 +1297,6 @@ Traps met while making the paper figures:
   with a shared y axis.
 * **Tick labels at the edge of side-by-side tiles collide** ("1000" of one tile touches "0" of the
   next); place the ticks away from the right limit (0, 400, 800 on a 0-1050 ms axis).
-* **Equal-aspect tiles of different shapes get different widths** with the default
-  `adjustable="box"`; use height ratios from the data and `adjustable="datalim"` (recipe 6.6).
 * **A very flat figure** (`0.2 * FIG_W`): shorten the y label (a rotated label longer than the
   panel sticks out), limit the y ticks (`MaxNLocator(nbins=3)`), put the legend in one row and name
   the data set inside the panel.
@@ -1259,17 +1309,17 @@ Traps met while making the paper figures:
   line drawn on top of it. Shade the distribution of the same quantity as the line (the metric per
   cycle / per window), or draw the median of what is shaded.
 * **A shading drawn as an image** (`imshow`, `pcolormesh`) is rasterised in the PDF, and
-  `pcolormesh` leaves faint vertical seams between its columns; nested `fill_between` bands
+  `pcolormesh` leaves faint vertical seams between its columns; `fill_between` rings
   (`ramp_bands`) look the same, stay vector and are connected along x.
+* **Many faint layers stacked on each other change colour.** Agg blends in 8 bits and rounds every
+  layer, so forty layers of opacity 0.01 drift towards grey (a lilac ramp turned grey). Give every
+  pixel one blend with the final opacity, as `ramp_bands` does.
 * **Leave no white margin under a shading**: with the default `xlim` the ramp stops before the
   frame; set the limits to the first and last x of the data.
 * **An inset without the rectangle** does not say what it magnifies; use `zoom_plot` and check that
   the rectangle is visible (a very flat region becomes a thin sliver, which is still the honest
   picture).
-* **Label positions written for LaTeX are tied to the saved image**: re-run the plot script
-  whenever the figure changes, otherwise the `Fig. n` tags sit next to the wrong box. They are
-  computed from the tight bounding box and `pad_inches`, so changing either moves them.
-* **A shrunk figure** (rule 15) must be included at the matching `s\columnwidth`; at
+* **A shrunk figure** (rule 13) must be included at the matching `s\columnwidth`; at
   `\columnwidth` its text prints `1/s` times too large.
 * **`usetex` needs LaTeX** (MiKTeX / TeX Live) on the `PATH`; the first run is slow while the font
   cache is built. A label with an unescaped `%` or `_` stops the save with a LaTeX error. Without
@@ -1291,7 +1341,7 @@ Traps met while making the paper figures:
   about 9.4 / 8.4 / 7.3 pt. To get other printed sizes change `fonts` (or `side`) in the `LAYOUTS`
   line of the layout; do not scale the included graphic by hand.
 * **A figure of a pair that has a legend or a label the other has not** is cropped to a different
-  height, and the two frames no longer line up next to each other (rule 19). Give both the same
+  height, and the two frames no longer line up next to each other (rule 16). Give both the same
   elements, or none.
 
 ## 10. Single-column papers (NeurIPS, ICLR)
@@ -1302,28 +1352,28 @@ A single-column paper uses the same style (sections 1 to 9) at a different size.
   `\typeout` line of section 2). A full figure is drawn 11 in wide with `--layout single`, fonts
   18 / 16 / 14 pt, and prints with text of about 9 / 8 / 7 pt next to the 10 pt body. 7 pt is the
   smallest text of the paper; if a figure needs more room make it wider or split it, do not shrink
-  the fonts (rule 15).
-* **One panel is half width, a full figure is a row** (rules 18 to 20). 5.5 in is too wide for one
-  curve and too narrow for more than three tiles.
+  the fonts (rule 13).
+* **One panel is half width, a full figure is a row** (rules 15 and 16). 5.5 in is too wide for one
+  curve; a full-width figure is a row of tiles or a long time series.
 * **Figures cost pages.** The main text of a NeurIPS paper has a page limit (9 pages in recent
   calls; check the current one) and a figure counts against it like text. Printed heights from the
-  table in section 2: a row of tiles 1.65 in, a signal with its residual 2.6 in, a 2 x 2 grid 3.5 in,
+  table in section 2: a row of tiles 1.3 in, a signal with its residual 2.1 in, a 2 x 2 grid 2.8 in,
   on a text height of 9 in.
-* **Colour.** The palette is assigned by role, and the baseline is also dashed and the models have
-  different markers, so a figure stays readable in a grey-scale print.
+* **Colour.** Each method keeps its colour in every figure of the paper (rule 4), and the baseline is
+  also dashed and the methods have different markers, so a figure stays readable in a grey-scale print.
 
 How each recipe is used in a single-column paper:
 
 | recipe | in a single-column paper |
 |---|---|
 | 6.1 signal and residual | full width, as it is |
-| 6.2 metric with its distribution | one panel is too wide at full width: use 6.7, or draw it at `HALF` (6.8) |
+| 6.2 metric with its distribution | one panel is too wide at full width: use 6.6 (tiles), or draw it at `HALF` (6.7) |
 | 6.3 two windows of a signal | full width, as it is (the layout this width is good for) |
-| 6.4 curves with a zoom, grouped bars | full width, 3.5 in tall; or split it into two figures of 6.8 |
-| 6.5 path coloured by a value | full width for an elongated object, `0.6` for a compact one |
-| 6.6 top views | `w_rel = 0.6`, or beside the text with `wrapfigure` (section 8) |
-| 6.7 a row of tiles | the standard full-width figure |
-| 6.8 two figures side by side | the standard one-panel figure |
+| 6.4 curves with a zoom | full width, as it is (a row of two panels) |
+| 6.5 path coloured by a value | full width for an elongated object |
+| 6.6 a row of tiles | the standard full-width figure |
+| 6.7 two figures side by side | the standard one-panel figure |
+| 6.8 legends | any style; one shared legend above a row of tiles |
 
 Setting up a new single-column paper:
 

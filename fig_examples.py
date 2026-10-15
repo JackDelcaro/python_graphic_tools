@@ -12,7 +12,6 @@ The functions are the recipes of the guide, written out here so that they run as
 """
 import numpy as np
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
 from paper_style import *          # style, palette, labels, helpers, ARGS
 from zoom_plot import zoom_plot    # inset + rectangle + connectors (recipe 6.4)
 
@@ -43,7 +42,7 @@ def fig_example_snapshot(name):
     handles = [Line2D([], [], color=C_MEAS, lw=2.0, marker="o", ms=3, label=r"measured $y$"),
                Line2D([], [], color=C_BASE, lw=1.4, ls=LS_BASE, label=LAB_BASE),
                Line2D([], [], color=C_PROPOSED, lw=2.0, label=LAB_PROPOSED)]
-    legend_top(axy, handles, ncol=3, title=TAG_TEST)
+    legend_at(axy, handles=handles, ncol=3, title=TAG_TEST)
     # in-panel tags on a patch of the local background, so no curve runs through them
     for x, s, ha, fc in ((0.012, "past", "left", "white"), (0.988, "forecast", "right", "#eeeeeb")):
         axy.text(x, 0.035, s, transform=axy.transAxes, ha=ha, fontsize=LEGEND_FS, color=INK_2,
@@ -53,35 +52,35 @@ def fig_example_snapshot(name):
 
 
 def fig_example_bands(name):
-    """A metric versus a parameter, with the distribution of that metric over the pieces of the
-    data set as a transparency ramp: one connected surface per model (nested filled bands,
-    opaque at the median piece, fading towards the extreme ones), the metric of the whole data
-    set on top. The shaded distribution and the line must be the same quantity, otherwise the
-    line does not run inside its shading."""
+    """A metric versus a parameter, with the distribution of that metric over the pieces of the data
+    set: <name>_ramp (a transparency ramp) and <name>_patch (a patch: 25-75 %),
+    the metric of the whole data set on top. The shaded distribution and the line must be the same
+    quantity, otherwise the line does not run inside its shading."""
     h = np.arange(0, 1051, 50)                               # forecast horizon [ms]
     rng = np.random.default_rng(0)
     rows = [(C_BASE, LS_BASE, "s", LAB_BASE, 6.6 + 0.2 * (1 - np.exp(-h / 150))),
             (C_COMPARE, "-", "o", LAB_COMPARE, 2.8 + 1.8 * (1 - np.exp(-h / 150))),
             (C_PROPOSED, "-", "D", LAB_PROPOSED, 0.4 + 4.0 * (1 - np.exp(-h / 90)))]
-    fig, (ax,) = stacked(height("curve"), [1.0])
-    y_max = 0.0
+    quantiles = []                                           # per method: quantiles over the pieces
     for c, ls, mk, lab, rmse in rows:
         # per-piece values: here 250 "cycles", each with its own level and noise
         per_piece = rmse * (1.0 + 0.35 * rng.standard_normal((250, 1))
                             + 0.10 * rng.standard_normal((250, h.size)))
-        Q = np.percentile(np.maximum(per_piece, 0.0), RAMP_Q, axis=0)
-        ramp_bands(ax, h, Q, color=c)                        # the distribution, as patches
-        y_max = max(y_max, Q[int(np.argmin(np.abs(RAMP_Q - 97.0)))].max())
-    for c, ls, mk, lab, rmse in rows:
-        ax.plot(h, rmse, color=c, ls=ls, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6,
-                zorder=4, label=lab)
-    ax.set_xlim(h[0], h[-1])                                 # cut on the data: no white margin
-    ax.set_ylim(0, 1.02 * y_max)
-    ax.set_xlabel(r"forecast horizon $h$ [ms]")
-    ax.set_ylabel(r"RMSE [a.u.]")
-    legend_top(ax, ncol=3, title=TAG_TEST)
-    finish(fig, [ax])
-    save(fig, name)
+        quantiles.append(np.percentile(np.maximum(per_piece, 0.0), RAMP_Q, axis=0))
+    for suffix, bands in (("ramp", ramp_bands), ("patch", patch_bands)):
+        fig, (ax,) = stacked(height("curve"), [1.0])
+        for (c, ls, mk, lab, rmse), Q in zip(rows, quantiles):
+            bands(ax, h, Q, color=c)                         # the distribution, as patches
+        for c, ls, mk, lab, rmse in rows:
+            ax.plot(h, rmse, color=c, ls=ls, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6,
+                    zorder=4, label=lab)
+        ax.set_xlim(h[0], h[-1])                             # cut on the data: no white margin
+        ax.set_ylim(0, 8)                                    # the tails above 8 are cut by the frame
+        ax.set_xlabel(r"forecast horizon $h$ [ms]")
+        ax.set_ylabel(r"RMSE [a.u.]")
+        legend_at(ax, ncol=3, title=TAG_TEST)
+        finish(fig, [ax])
+        save(fig, f"{name}_{suffix}")
 
 
 def fig_example_split(name):
@@ -93,7 +92,8 @@ def fig_example_split(name):
     ratios = [1.4, 0.7]                                      # signal, residual
     fig = plt.figure(figsize=(FIG_W, height("split")))
     gs = fig.add_gridspec(len(ratios), len(windows), height_ratios=ratios, hspace=0.07,
-                          wspace=0.1, width_ratios=[b - a for a, b, _ in windows])
+                          wspace=0.1, width_ratios=[b - a for a, b, _ in windows],
+                          bottom=0.65 / height("split"))   # 0.65 in: tick labels + the shared x label
     axes = [[None] * len(windows) for _ in ratios]
     for i in range(len(ratios)):
         for j in range(len(windows)):
@@ -115,24 +115,20 @@ def fig_example_split(name):
     axes[0][0].set_ylabel(r"$y$ [a.u.]")
     axes[1][0].set_ylabel(r"$r$ [a.u.]")
     fig.supxlabel(r"time within cycle [s]", fontsize=LABEL_FS, y=0.0)
-    h, l = axes[0][0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, 0.9), ncol=2, frameon=False,
-               fontsize=LEGEND_FS, title=TAG_TRAIN, title_fontsize=LEGEND_FS + 1)
+    legend_above_all(fig, axes[0], ncol=2, title=TAG_TRAIN)  # one legend above both tiles
     finish(fig, [ax for row in axes for ax in row])
     save(fig, name)
 
 
 def fig_example_convergence(name):
-    """Top: loss curves of an ordered series, with an inset on the converged part.
-    Bottom: grouped bars of one number per order and model."""
+    """Loss curves of an ordered series, one panel per method, with an inset on the converged part."""
     ns = [1, 2, 3, 4, 5]
     cols = viridis_colours(ns)
     steps = np.arange(400)
     final = {LAB_PROPOSED: {n: 3.55 - 0.01 * n for n in ns}, LAB_COMPARE: {n: 3.8 + 0.21 * n for n in ns}}
-    fig = plt.figure(figsize=(FIG_W, height("grid")))
-    gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 0.95], hspace=0.62, wspace=0.3)
+    fig = plt.figure(figsize=(FIG_W, height("tiles")))
+    gs = fig.add_gridspec(1, 2, wspace=0.3)
     axc = [fig.add_subplot(gs[0, 0]), fig.add_subplot(gs[0, 1])]
-    axb = [fig.add_subplot(gs[1, 0]), fig.add_subplot(gs[1, 1])]
     for ax, lab in zip(axc, (LAB_PROPOSED, LAB_COMPARE)):
         for n in ns:
             loss = final[lab][n] + (7.5 - final[lab][n]) * np.exp(-steps / 40)
@@ -148,34 +144,14 @@ def fig_example_convergence(name):
     for ln in zm.child.lines:
         ln.set_linewidth(1.6)
     axc[0].set_ylabel(r"training loss [a.u.]")
-    up = 0.34 / fig.get_figheight()               # 0.34 in above a panel: clear of its title
-    h, l = axc[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, axc[0].get_position().y1 + up),
-               ncol=5, frameon=False, fontsize=LEGEND_FS, columnspacing=0.9, handlelength=1.3,
-               title="training set, same initial hyperparameters", title_fontsize=LEGEND_FS + 1)
-    x, w = np.arange(len(ns)), 0.38
-    for ax, tag in zip(axb, (TAG_TRAIN, TAG_TEST)):
-        comp = np.array([final[LAB_COMPARE][n] for n in ns])
-        prop = np.array([final[LAB_PROPOSED][n] for n in ns])
-        ax.bar(x - w / 2, comp, w, color=C_COMPARE, label=LAB_COMPARE, zorder=3)
-        ax.bar(x + w / 2, prop, w, color=C_PROPOSED, label=LAB_PROPOSED, zorder=3)
-        ax.set_xticks(x, [str(n) for n in ns])
-        ax.tick_params(axis="x", which="minor", bottom=False, top=False)
-        ax.set_xlabel(r"previous cycles $N_{\mathrm{prev}}$")
-        ax.set_ylabel(r"loss [a.u.]")
-        ax.set_ylim(0, 1.18 * max(comp.max(), prop.max()))  # bars start at zero
-        ax.set_title(tag, fontsize=LEGEND_FS + 1, color=C_AX, pad=5)
-    h, l = axb[0].get_legend_handles_labels()
-    fig.legend(h, l, loc="lower center", bbox_to_anchor=(0.5, axb[0].get_position().y1 + up),
-               ncol=2, frameon=False, fontsize=LEGEND_FS)
-    finish(fig, axc + axb)
+    legend_above_all(fig, axc, ncol=5, columnspacing=0.9, handlelength=1.3,
+                     title="training set, same initial hyperparameters")
+    finish(fig, axc)
     save(fig, name)
 
 
-def fig_example_map(name, boxes=((1.0, 2.2, "fig:window", "north"),)):
-    """A path in the plane, coloured by a value, with a colour bar. `boxes` are
-    windows of the path (here in the parameter s) marked by a rectangle; their labels are
-    written by LaTeX from <name>_labels.tex, so they follow the numbering of the document."""
+def fig_example_map(name):
+    """A path in the plane, coloured by a value, with a vertical colour bar on the right."""
     import seaborn as sns
     from matplotlib.collections import LineCollection
     from matplotlib.colors import Normalize
@@ -185,11 +161,15 @@ def fig_example_map(name, boxes=((1.0, 2.2, "fig:window", "north"),)):
     pts = np.column_stack([X, Y])
     segs = np.stack([pts[:-1], pts[1:]], axis=1)
     cmap = sns.color_palette("rocket_r", as_cmap=True)
-    norm = Normalize(0, float(np.percentile(err, 98)))       # cap at p98: colour bar "extend"
-    panel_h = (FIG_W - 1.0) * (np.ptp(Y) + 40) / (np.ptp(X) + 40)   # height from the data aspect
-    fig = plt.figure(figsize=(FIG_W, panel_h + 1.3))         # FIG_W - 1 in: the width of the panel
-    gs = fig.add_gridspec(2, 1, height_ratios=[panel_h, 0.16], hspace=0.5)
-    ax, cax = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
+    norm = Normalize(0, float(err.max()))                    # the colour bar covers the data range
+    left, right, bottom, top = 1.0, 0.1, 0.8, 0.4            # margins [in]: y label, colour-bar label, x label, title
+    gap, cb_w, cb_labels = 0.15, 0.22, 0.85                  # map - colour bar gap, colour bar width, its labels [in]
+    map_w = FIG_W - left - gap - cb_w - cb_labels - right
+    map_h = map_w * (np.ptp(Y) + 40) / (np.ptp(X) + 40)      # height from the data aspect
+    W, H = FIG_W, bottom + map_h + top
+    fig = plt.figure(figsize=(W, H))
+    ax = fig.add_axes([left / W, bottom / H, map_w / W, map_h / H])
+    cax = fig.add_axes([(left + map_w + gap) / W, bottom / H, cb_w / W, map_h / H])
     lc = LineCollection(segs, cmap=cmap, norm=norm, linewidth=3.4, capstyle="round")
     lc.set_array(0.5 * (err[:-1] + err[1:]))
     ax.add_collection(lc)
@@ -199,55 +179,10 @@ def fig_example_map(name, boxes=((1.0, 2.2, "fig:window", "north"),)):
     ax.set_xlabel(r"$x_1$ [mm]")
     ax.set_ylabel(r"$x_2$ [mm]")
     ax.set_title(TAG_TEST, loc="left", fontsize=LEGEND_FS + 1, color=C_AX, pad=5)
-    cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax,
-                      orientation="horizontal", extend="max")
+    cb = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax)
     cb.set_label(r"absolute error [a.u.]", fontsize=LABEL_FS)
     cb.ax.tick_params(labelsize=TICK_FS, direction="in", colors=C_AX)
-    tags, pad = [], 12.0                                     # [mm] around the marked path
-    for j, (s_a, s_b, ref, anchor) in enumerate(boxes):
-        m = (s >= s_a) & (s <= s_b)
-        x0, x1 = X[m].min() - pad, X[m].max() + pad
-        y0, y1 = Y[m].min() - pad, Y[m].max() + pad
-        ax.add_patch(Rectangle((x0, y0), x1 - x0, y1 - y0, fill=False, edgecolor=C_AX, lw=1.1,
-                               ls="-" if j == 0 else (0, (4, 2)), zorder=6))
-        off = 6.0                                            # label clear of the box
-        y_top, y_bot = (y0, y1) if ax.yaxis_inverted() else (y1, y0)
-        up, down = (-off, off) if ax.yaxis_inverted() else (off, -off)
-        cx, cy = 0.5 * (x0 + x1), 0.5 * (y0 + y1)
-        pt = {"south": (cx, y_top + up), "north": (cx, y_bot + down),
-              "west": (x1 + off, cy), "east": (x0 - off, cy)}[anchor]
-        tags.append((ax, pt[0], pt[1], ref, anchor))
     finish(fig, [ax])
-    save_labels(fig, name, tags)
-    save(fig, name)
-
-
-def fig_example_topviews(name, w_rel=0.6):
-    """Top views of two objects of different shape, equal axes, tiles of the same width. Drawn at
-    w_rel * FIG_W and included at w_rel * \\linewidth (rule 15), 0.6 here."""
-    s = np.linspace(0, 2 * np.pi, 600)
-    shapes = [("training set", 800 * np.cos(s), 300 * np.sin(s)),
-              ("test set", 480 * np.cos(s), 230 * np.sin(s))]
-    pad = 30.0
-    lims = [((X.min() - pad, X.max() + pad), (Y.min() - pad, Y.max() + pad)) for _, X, Y in shapes]
-    ratios = [(lv[1] - lv[0]) / (lh[1] - lh[0]) for lh, lv in lims]   # height / width of the data
-    hspace, left, right, bottom, top = 0.3, 0.14, 0.98, 0.1, 0.94
-    W = w_rel * FIG_W
-    fig_h = W * (right - left) * (sum(ratios) + hspace * np.mean(ratios)) / (top - bottom)
-    fig = plt.figure(figsize=(W, fig_h))
-    gs = fig.add_gridspec(len(shapes), 1, height_ratios=ratios, hspace=hspace, left=left,
-                          right=right, bottom=bottom, top=top)
-    axes = [fig.add_subplot(gs[i]) for i in range(len(shapes))]
-    for ax, (tag, X, Y), (lh, lv) in zip(axes, shapes, lims):
-        ax.plot(X, Y, color=BLUE, lw=1.4)
-        ax.set_xlim(*lh)
-        ax.set_ylim(*lv)
-        ax.set_aspect("equal", adjustable="datalim")         # keep the tile width, adapt limits
-        ax.set_ylabel(r"$x_2$ [mm]")
-        ax.set_title(tag, loc="left", fontsize=LEGEND_FS + 2, color=C_AX, pad=4)
-    axes[-1].set_xlabel(r"$x_1$ [mm]")
-    fig.align_ylabels(axes)
-    finish(fig, axes)
     save(fig, name)
 
 
@@ -261,7 +196,7 @@ def fig_example_tiles(name):
             (C_PROPOSED, "D", LAB_PROPOSED, 0.4 + 4.0 * (1 - np.exp(-h / 90)))]
     fig = plt.figure(figsize=(FIG_W, height("tiles")))
     gs = fig.add_gridspec(1, len(rows), wspace=0.08)
-    axes, y_max = [], 0.0
+    axes = []
     for j, (c, mk, lab, rmse) in enumerate(rows):
         ax = fig.add_subplot(gs[j], sharey=axes[0] if j else None)
         per_piece = rmse * (1.0 + 0.35 * rng.standard_normal((250, 1))
@@ -269,7 +204,6 @@ def fig_example_tiles(name):
         Q = np.percentile(np.maximum(per_piece, 0.0), RAMP_Q, axis=0)
         ramp_bands(ax, h, Q, color=c)
         ax.plot(h, rmse, color=c, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6, zorder=4)
-        y_max = max(y_max, Q[int(np.argmin(np.abs(RAMP_Q - 97.0)))].max())
         ax.set_xlim(h[0], h[-1])
         ax.set_xticks([0, 400, 800])                         # no tick at the right limit
         ax.set_xlabel(r"horizon $h$ [ms]")
@@ -277,8 +211,8 @@ def fig_example_tiles(name):
         if j:
             ax.tick_params(labelleft=False)                  # shared y: labels on the left only
         axes.append(ax)
-    axes[0].set_ylim(0, 1.02 * y_max)
-    axes[0].set_yticks([0, 5, 10])                           # short labels: "0.0" would touch the x "0"
+    axes[0].set_ylim(0, 8)                                   # the tails above 8 are cut by the frame
+    axes[0].set_yticks([0, 4, 8])                            # short labels: "0.0" would touch the x "0"
     axes[0].set_ylabel(r"RMSE [a.u.]")
     axes[0].text(0.05, 0.05, TAG_TEST, transform=axes[0].transAxes, fontsize=LEGEND_FS, color=INK_2,
                  zorder=10, bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.9))
@@ -301,7 +235,7 @@ def fig_example_pair(name):
     ax.set_ylim(0, 6)
     ax.set_xlabel(r"forecast horizon $h$ [ms]")
     ax.set_ylabel(r"RMSE [a.u.]")
-    legend_top(ax, ncol=2, title=TAG_TEST)
+    legend_at(ax, ncol=2, title=TAG_TEST)
     finish(fig, [ax])
     save(fig, f"{name}_a")
     # (b) the same frame: grouped bars per number of previous cycles
@@ -314,9 +248,52 @@ def fig_example_pair(name):
     ax.set_ylim(0, 6)
     ax.set_xlabel(r"previous cycles $N_{\mathrm{prev}}$")
     ax.set_ylabel(r"loss [a.u.]")
-    legend_top(ax, ncol=2, title=TAG_TEST)
+    legend_at(ax, ncol=2, title=TAG_TEST)
     finish(fig, [ax])
     save(fig, f"{name}_b")
+
+
+def fig_example_legends(name):
+    """The legend styles of the kit: <name>_inside, <name>_above, <name>_above_boxed (one panel each) and
+    <name>_row, <name>_row_boxed (a row of tiles that share their colours, one legend above all)."""
+    h = np.arange(0, 1051, 50)                               # forecast horizon [ms]
+    series = [(C_BASE, LS_BASE, "s", "baseline", 6.6 + 0.2 * (1 - np.exp(-h / 150))),
+              (C_COMPARE, "-", "o", "comparison", 2.8 + 1.8 * (1 - np.exp(-h / 150))),
+              (C_PROPOSED, "-", "D", "proposed", 0.4 + 4.0 * (1 - np.exp(-h / 90)))]
+    s, kind = (HALF, "pair") if LAYOUT == "single" else (1.0, "curve")   # one panel: rule 15
+
+    def draw(ax, k=1.0):
+        for c, ls, mk, lab, y in series:
+            ax.plot(h, k * y, color=c, ls=ls, marker=mk, ms=4.0, lw=1.8, mec="white", mew=0.6, label=lab)
+        ax.set_xlim(h[0], h[-1])
+        ax.set_ylim(0, 8)
+        ax.set_xlabel(r"horizon $h$ [ms]")
+
+    for suffix, where, boxed in (("inside", "inside", None), ("above", "above", None),
+                                 ("above_boxed", "above", True)):
+        fig, (ax,) = stacked(height(kind, s), [1.0], width=s * FIG_W)
+        draw(ax)
+        ax.set_ylabel(r"RMSE [a.u.]")
+        legend_at(ax, where, boxed)
+        finish(fig, [ax])
+        save(fig, f"{name}_{suffix}")
+
+    for suffix, boxed in (("row", False), ("row_boxed", True)):
+        fig = plt.figure(figsize=(FIG_W, height("tiles")))
+        gs = fig.add_gridspec(1, 3, wspace=0.08)
+        axes = []
+        for j, (title, k) in enumerate((("training set", 0.85), ("validation set", 1.0), (TAG_TEST, 1.12))):
+            ax = fig.add_subplot(gs[j], sharey=axes[0] if j else None)
+            draw(ax, k)
+            ax.set_xticks([0, 400, 800])                     # no tick at the right limit
+            ax.set_title(title, fontsize=LEGEND_FS + 1, color=C_AX, pad=5)
+            if j:
+                ax.tick_params(labelleft=False)              # shared y: labels on the left only
+            axes.append(ax)
+        axes[0].set_ylabel(r"RMSE [a.u.]")
+        legend_above_all(fig, axes, boxed=boxed)             # one legend, above everything
+        finish(fig, axes)
+        save(fig, f"{name}_{suffix}")
 
 
 if want("fig_example_snapshot"):
@@ -329,10 +306,10 @@ if want("fig_example_convergence"):
     fig_example_convergence("fig_example_convergence")
 if want("fig_example_map"):
     fig_example_map("fig_example_map")
-if want("fig_example_topviews"):
-    fig_example_topviews("fig_example_topviews")
 if want("fig_example_tiles"):
     fig_example_tiles("fig_example_tiles")
 if want("fig_example_pair"):
     fig_example_pair("fig_example_pair")
+if want("fig_example_legends"):
+    fig_example_legends("fig_example_legends")
 show_if_requested()

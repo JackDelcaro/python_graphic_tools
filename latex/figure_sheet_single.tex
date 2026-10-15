@@ -14,17 +14,8 @@
 \documentclass[10pt]{article}
 \usepackage[paperwidth=8.5in,paperheight=11in,textwidth=5.5in,textheight=9in,top=1in]{geometry}
 \usepackage{times}
-\usepackage{graphicx,subcaption,wrapfig,tikz,placeins}
+\usepackage{graphicx,subcaption,wrapfig,placeins}
 \graphicspath{{../images/paper_single/}}
-
-% a label written by LaTeX on top of a figure (guide, section 8): \ovlfig[width]{figure}{labels file}
-\newcommand{\ovltag}[4]{\node[anchor=#3, inner sep=1.2pt, font=\scriptsize, fill=white,
-  fill opacity=0.78, text opacity=1] at (#1,#2) {Fig.~\ref{#4}};}
-\newcommand{\ovlfig}[3][1]{%
-  \begin{tikzpicture}
-    \node[anchor=south west,inner sep=0] (im) {\includegraphics[width=#1\linewidth]{#2.pdf}};
-    \begin{scope}[x={(im.south east)},y={(im.north west)}]\input{#3}\end{scope}
-  \end{tikzpicture}}
 
 \begin{document}
 \typeout{WIDTHS: textwidth=\the\textwidth, columnwidth=\the\columnwidth, linewidth=\the\linewidth}
@@ -33,13 +24,13 @@
 Body text at 10\,pt, to compare with the text of the figures: ticks and legends print at about 7\,pt,
 axis labels at about 9\,pt.
 
-% a row of tiles, full width (recipe 6.7); also the target of the map's box (label fig:window)
+% a row of tiles, full width (recipe 6.6)
 \begin{figure}[t]\centering
   \includegraphics[width=\linewidth]{fig_example_tiles.pdf}
-  \caption{A row of tiles at full width.}\label{fig:window}
+  \caption{A row of tiles at full width.}\label{fig:tiles}
 \end{figure}
 
-% two figures side by side, each 0.48 of the text width (recipe 6.8)
+% two figures side by side, each 0.48 of the text width (recipe 6.7)
 \begin{figure}[t]
   \centering
   \begin{subfigure}[t]{0.48\linewidth}
@@ -59,9 +50,13 @@ axis labels at about 9\,pt.
 \end{figure}
 
 \begin{figure}[t]\centering
-  \includegraphics[width=\linewidth]{fig_example_bands.pdf}
-  \caption{A metric with its distribution (one panel at full width is wide: prefer the tiles or
-  the pair).}\label{fig:bands}
+  \includegraphics[width=\linewidth]{fig_example_bands_ramp.pdf}
+  \caption{A metric with its distribution as a transparency ramp.}\label{fig:ramp}
+\end{figure}
+
+\begin{figure}[t]\centering
+  \includegraphics[width=\linewidth]{fig_example_bands_patch.pdf}
+  \caption{The same as a patch: 25--75\,\%.}\label{fig:patch}
 \end{figure}
 
 \begin{figure}[t]\centering
@@ -71,23 +66,24 @@ axis labels at about 9\,pt.
 
 \begin{figure}[t]\centering
   \includegraphics[width=\linewidth]{fig_example_convergence.pdf}
-  \caption{Curves with a zoom, and grouped bars.}\label{fig:conv}
+  \caption{Curves with a zoom.}\label{fig:conv}
 \end{figure}
 
 \begin{figure}[t]\centering
-  \ovlfig{fig_example_map}{../images/paper_single/fig_example_map_labels}
-  \caption{A path coloured by a value; the label of the box is written by \LaTeX.}\label{fig:map}
+  \includegraphics[width=\linewidth]{fig_example_map.pdf}
+  \caption{A path coloured by a value.}\label{fig:map}
 \end{figure}
 
-% a figure next to the text, drawn at 0.6 and included at the width save() printed (0.58)
-\begin{wrapfigure}{r}{0.58\linewidth}
+% a figure next to the text, drawn at HALF and included at the same width
+\begin{wrapfigure}{r}{0.48\linewidth}
   \centering
-  \includegraphics[width=0.58\linewidth]{fig_example_topviews.pdf}
-  \caption{Top views of two objects.}\label{fig:topviews}
+  \includegraphics[width=0.48\linewidth]{fig_example_pair_a.pdf}
+  \caption{RMSE versus horizon.}\label{fig:wrap}
 \end{wrapfigure}
-Text that wraps around a figure at 0.58 of the text width. Text that wraps around a figure at 0.58
-of the text width. Text that wraps around a figure at 0.58 of the text width. Text that wraps around
-a figure at 0.58 of the text width. See Fig.~\ref{fig:topviews}.
+Text that wraps around a figure at 0.48 of the text width. Text that wraps around a figure at 0.48
+of the text width. Text that wraps around a figure at 0.48 of the text width. Text that wraps around
+a figure at 0.48 of the text width. Text that wraps around a figure at 0.48 of the text width. See
+Fig.~\ref{fig:wrap}.
 
 \FloatBarrier
 \end{document}

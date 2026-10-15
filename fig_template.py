@@ -34,7 +34,7 @@ def fig_template(name):
     s, kind = (1.0, "curve") if LAYOUT == "two" else (HALF, "pair")
     fig, (ax,) = stacked(height(kind, s), [1.0], width=s * FIG_W)
 
-    # Colours are assigned by role (guide, section 3): comparison model aqua, proposed model orange.
+    # One colour per method, the same in every figure of the paper (guide, rule 4): C_COMPARE and C_PROPOSED.
     ax.plot(h, d["rmse_comparison"], color=C_COMPARE, marker="o", ms=4.5, lw=1.8, mec="white", mew=0.6,
             zorder=5, label=LAB_COMPARE)
     ax.plot(h, d["rmse_proposed"], color=C_PROPOSED, marker="D", ms=4.5, lw=1.8, mec="white", mew=0.6,
@@ -44,9 +44,9 @@ def fig_template(name):
     ax.set_ylim(0, 6)
     ax.set_xlabel(r"forecast horizon $h$ [ms]")              # symbol and unit; no figure title
     ax.set_ylabel(r"RMSE [a.u.]")
-    legend_top(ax, ncol=2, title=TAG_TEST)                   # frameless, above the panel, names the data set
+    legend_at(ax, ncol=2, title=TAG_TEST)                    # above the panel, centred (guide, rule 6); names the data set
     finish(fig, [ax])
-    save(fig, name)                                          # PDF + SVG + PNG; prints the width to include it at
+    save(fig, name)                                          # PDF + SVG + PNG (+ _white.png for markdown); prints the width
 
     # Every number the figure shows is printed, so the text and the caption quote the same data.
     for label, key in ((LAB_COMPARE, "rmse_comparison"), (LAB_PROPOSED, "rmse_proposed")):

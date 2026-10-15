@@ -4,7 +4,7 @@ paper_style.py - figure style for the paper, two-column or single-column.
 Draw at twice the printed width, include at the printed width (\\linewidth): FIG_W = 7 in for a
 column of a two-column paper (fonts 16/14/12 pt), 11 in for the text width of a single-column
 paper such as NeurIPS (fonts 18/16/14 pt). Printed, the text is nominally 8/7/6 pt (two) and 9/8/7 pt
-(single); section 9 says why the real size is a little larger. Fixed palette assigned by role. PDF (for LaTeX) + SVG + PNG (300 dpi) in images/paper/
+(single); section 9 says why the real size is a little larger. One colour per method, the same in every figure. PDF (for LaTeX) + SVG + PNG (300 dpi) in images/paper/
 (images/paper_single/ for --layout single), with a transparent figure background and white panels.
 
     from paper_style import *
@@ -57,10 +57,10 @@ LEGEND_FS, TICK_FS, LABEL_FS = LAYOUTS[LAYOUT]["fonts"]
 
 # height / width of a figure of each type (section 2); a wide single-column figure is lower
 ASPECT = {
-    "two":    dict(curve=0.50, tiles=0.45, flat=0.20, snapshot=0.78, stack3=0.72, split=0.55,
-                   grid=0.86, pair=0.80),
-    "single": dict(curve=0.36, tiles=0.30, flat=0.14, snapshot=0.48, stack3=0.44, split=0.38,
-                   grid=0.64, pair=0.74),
+    "two":    dict(curve=0.40, tiles=0.36, flat=0.16, snapshot=0.62, stack3=0.58, split=0.44,
+                   grid=0.69, pair=0.64),
+    "single": dict(curve=0.29, tiles=0.24, flat=0.11, snapshot=0.38, stack3=0.35, split=0.30,
+                   grid=0.51, pair=0.59),
 }
 
 
@@ -72,14 +72,17 @@ def height(kind, s=1.0):
 
 C_AX = "#262626"                              # spines, ticks, labels, grid
 
-# ---- palette: fixed slots, assigned by role, never cycled -----------------------------------
-BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
-MAGENTA, GREEN, VIOLET, RED = "#e87ba4", "#008300", "#4a3aa7", "#e34948"
-INK_2, MUTED, NEUTRAL = "#52514e", "#898781", "#c3c2b7"
-C_MEAS, C_PROPOSED, C_COMPARE, C_INPUT, C_BASE = BLUE, ORANGE, AQUA, YELLOW, INK_2
-C_PREV = ["#bcd4f2", "#7fabe6"]               # cycle k-2, cycle k-1 (tints of BLUE)
-LS_BASE = (0, (4, 2))                         # baseline model
-LS_REF = (0, (6, 3))                          # shared or global reference value
+# ---- colours: ONE colour per method or data type, the same in every figure of the paper ---------------
+# The kit prescribes none (example palettes: palettes/). Keep the choices of a paper in one table like this.
+BLUE, LILAC = "#1D4E89", "#AE78CC"                    # the two colours of the examples
+INK_2, MUTED, NEUTRAL = "#52514e", "#898781", "#c3c2b7"   # dark grey (baseline), limits and zero lines, context shading
+
+# The assignment used by the examples. A paper makes its own table once and keeps it in every figure.
+C_MEAS = BLUE                                         # a light preference: measured data in blue
+C_PROPOSED, C_COMPARE, C_BASE = LILAC, BLUE, INK_2
+C_PREV = ["#bbcadc", "#7795b8"]                       # cycle k-2, cycle k-1 (tints of BLUE: older = lighter)
+LS_BASE = (0, (4, 2))                                 # baseline model
+LS_REF = (0, (6, 3))                                  # shared or global reference value
 
 # ---- labels: one spelling in every figure ---------------------------------------------------
 LAB_PROPOSED, LAB_COMPARE = "proposed", "comparison"
@@ -144,14 +147,72 @@ def stacked(height, ratios, sharex=True, hspace=0.05, width=None):
 
 
 def legend_top(ax, handles=None, ncol=3, y=1.0, **kw):
-    """Frameless legend centred above the panel; title= names the data set."""
+    """Frameless legend centred above the panel, close to it; title= names the data set."""
     kw = dict(dict(loc="lower center", bbox_to_anchor=(0.5, y), ncol=ncol, frameon=False,
-                   fontsize=LEGEND_FS, handlelength=1.6, columnspacing=1.2,
-                   title_fontsize=LEGEND_FS + 1), **kw)
+                   fontsize=LEGEND_FS, handlelength=1.6, columnspacing=1.2, borderaxespad=0.1,
+                   borderpad=0.15, title_fontsize=LEGEND_FS + 1), **kw)
     leg = ax.legend(handles=handles, **kw) if handles is not None else ax.legend(**kw)
     if kw.get("title"):
         leg.get_title().set_color(C_AX)
     return leg
+
+
+LEGEND_ROUND = 0.3      # corner radius of a boxed legend, in units of the legend font size (matplotlib: 0.2)
+
+
+def _box(leg, boxed):
+    """A boxed legend: rounded corners (LEGEND_ROUND), thin light-grey edge, white face; or no frame."""
+    frame = leg.get_frame()
+    frame.set_visible(boxed)
+    if boxed:
+        frame.set_boxstyle("round", pad=0, rounding_size=LEGEND_ROUND)
+        frame.set_facecolor("white")
+        frame.set_edgecolor("0.75")
+        frame.set_linewidth(0.8)
+        frame.set_alpha(0.9)
+    return leg
+
+
+def legend_at(ax, where="above", boxed=None, ncol=None, handles=None, **kw):
+    """Legend of one panel at a house position (rule 6).
+    where="above"   centred above the panel, frameless: the default, it never covers data
+    where="inside"  lower right, in a rounded box, over the panel: only where the curves leave a corner free
+    boxed=None gives frameless above and boxed inside; True / False forces the rounded box on or off.
+    ncol defaults to 3 above (one row) and 1 inside (stacked); title= names the data set."""
+    boxed = (where == "inside") if boxed is None else boxed
+    if where == "above":
+        k = dict(borderpad=0.4, borderaxespad=0.3) if boxed else {}   # a frameless legend sits close
+        k.update(kw)
+        leg = legend_top(ax, handles, ncol=3 if ncol is None else ncol, frameon=boxed, **k)
+    elif where == "inside":
+        k = dict(loc="lower right", ncol=1 if ncol is None else ncol, frameon=boxed, fontsize=LEGEND_FS,
+                 handlelength=1.6, title_fontsize=LEGEND_FS + 1)
+        k.update(kw)
+        leg = ax.legend(handles=handles, **k) if handles is not None else ax.legend(**k)
+        if k.get("title"):
+            leg.get_title().set_color(C_AX)
+    else:
+        raise ValueError(f'where must be "above" or "inside", not {where!r}')
+    return _box(leg, boxed)
+
+
+def legend_above_all(fig, axes, boxed=False, ncol=3, rise=None, handles=None, labels=None, **kw):
+    """ONE legend above a row of panels that share their colours (rule 6), centred on the figure.
+    rise [in] is the distance above the top of the panels; the default sits just above the panel titles,
+    pass 0.06 if the panels have none. The entries are those of the first panel unless handles= and
+    labels= are given."""
+    if handles is None:
+        handles, labels = axes[0].get_legend_handles_labels()
+    if rise is None:                                         # just above the panel titles
+        rise = ((LEGEND_FS + 1) * 0.75 + 5) / 72 + 0.06
+    y = axes[0].get_position().y1 + rise / fig.get_figheight()
+    pad = dict(borderpad=0.4, borderaxespad=0.3) if boxed else dict(borderpad=0.15, borderaxespad=0.1)
+    kw = dict(dict(loc="lower center", bbox_to_anchor=(0.5, y), ncol=ncol, frameon=boxed, fontsize=LEGEND_FS,
+                   handlelength=1.6, columnspacing=1.2, title_fontsize=LEGEND_FS + 1, **pad), **kw)
+    leg = fig.legend(handles, labels, **kw)
+    if kw.get("title"):
+        leg.get_title().set_color(C_AX)
+    return _box(leg, boxed)
 
 
 def finish(fig, axes):
@@ -169,9 +230,12 @@ def finish(fig, axes):
 
 def save(fig, name):
     """PDF (for LaTeX) + SVG + PNG at 300 dpi; transparent figure background, white panels.
+    Also <name>_white.png: the same PNG on an opaque white background, ONLY for markdown files and
+    viewers with a dark background (README, GitHub dark theme, VS Code dark preview), where the dark
+    labels of the transparent files are invisible. Never use it in LaTeX or on slides.
     Nothing is written with --show. Prints the saved width: the figure prints at
     SCALE * saved width, so include it at that width as a fraction of \\linewidth (about the s it
-    was drawn for, rule 15)."""
+    was drawn for, rule 13)."""
     if ARGS.show:
         return
     OUT.mkdir(parents=True, exist_ok=True)
@@ -181,55 +245,54 @@ def save(fig, name):
         ax.patch.set_alpha(1.0)
     for ext, kw in (("pdf", {}), ("svg", {}), ("png", {"dpi": 300})):
         fig.savefig(OUT / f"{name}.{ext}", bbox_inches="tight", pad_inches=PAD_IN, **kw)
+    fig.patch.set_alpha(1.0)                                 # opaque white background: markdown files only
+    fig.patch.set_facecolor("white")
+    fig.savefig(OUT / f"{name}_white.png", bbox_inches="tight", pad_inches=PAD_IN, dpi=300)
     w_in = fig.get_tightbbox(fig.canvas.get_renderer()).width + 2 * PAD_IN
     plt.close(fig)
     print(f"  -> {OUT.name}/{name}.pdf  (saved {w_in:.2f} in = {w_in * SCALE / PRINT_W:.2f} "
           f"\\linewidth at scale {SCALE})")
 
 
-# ---- a distribution as a transparency ramp ---------------------------------------------------
+# ---- a distribution: transparency ramp or patches --------------------------------------------
 RAMP_Q = np.r_[0.5, np.arange(1.0, 100.0), 99.5]   # quantile grid the ramp is built from
 RAMP_ALPHA, RAMP_GAMMA = 0.38, 1.1                 # opacity at the median, fade towards the tails
 
 
 def ramp_bands(ax, x, Q, qs=RAMP_Q, color=C_PROPOSED, n_bands=40, alpha_max=RAMP_ALPHA,
                gamma=RAMP_GAMMA, zorder=1):
-    """Distribution as a transparency ramp made of nested filled bands (patches): one connected
-    surface along x, vector in the PDF, following the quantile curves exactly. Band k spans the
-    central range whose half-width in quantile units is t_k, so the opacities add up to
-    alpha_max * (1 - t^gamma): opaque at the median, transparent at the tails.
-    Q: quantile function of the distribution, shape (len(qs), len(x))."""
+    """Distribution as a transparency ramp: nested percentile ranges, opaque at the median, fading
+    towards the tails, no visible edges. One connected surface along x, vector in the PDF.
+    The ranges are drawn as rings that do not overlap, each with the opacity that the nested bands
+    would add up to there, 1 - (1 - alpha_max / n_bands)**k for k bands: every pixel is blended once, so
+    the colour is exact even in a PNG (forty faint layers stacked on each other drift in hue in 8-bit
+    blending: lilac turns grey). Band k spans the central range whose half-width in quantile units is
+    t_k = (1 - k / n_bands)**(1 / gamma). Q: quantile function, shape (len(qs), len(x))."""
     a = alpha_max / n_bands
-    for k in range(1, n_bands + 1):
-        t = (1.0 - k / n_bands) ** (1.0 / gamma)
-        lo_p, hi_p = 50.0 * (1.0 - t), 50.0 * (1.0 + t)
+
+    def bound(p):
+        return np.array([np.interp(p, qs, Q[:, j]) for j in range(Q.shape[1])])
+
+    t = [(1.0 - k / n_bands) ** (1.0 / gamma) for k in range(1, n_bands + 1)]      # t[-1] = 0: the median
+    edges = [(bound(50.0 * (1.0 - tk)), bound(50.0 * (1.0 + tk))) for tk in t]     # (lower, upper) of band k
+    for k in range(1, n_bands):                                  # ring k: band k without band k + 1
+        (lo_out, hi_out), (lo_in, hi_in) = edges[k - 1], edges[k]
+        alpha = 1.0 - (1.0 - a) ** k
+        ax.fill_between(x, lo_out, lo_in, color=color, alpha=alpha, lw=0, zorder=zorder)
+        ax.fill_between(x, hi_in, hi_out, color=color, alpha=alpha, lw=0, zorder=zorder)
+
+
+def patch_bands(ax, x, Q, qs=RAMP_Q, color=C_PROPOSED, levels=((25, 75, 0.30),), zorder=1):
+    """Distribution as a patch: one flat tint for one percentile range, by default 25-75 %. More ranges
+    can be passed as levels, (lower percentile, upper percentile, opacity), but one patch is easier to read
+    than overlapping ones. Q as in ramp_bands."""
+    for lo_p, hi_p, alpha in levels:
         lo = np.array([np.interp(lo_p, qs, Q[:, j]) for j in range(Q.shape[1])])
         hi = np.array([np.interp(hi_p, qs, Q[:, j]) for j in range(Q.shape[1])])
-        ax.fill_between(x, lo, hi, color=color, alpha=a, lw=0, zorder=zorder)
+        ax.fill_between(x, lo, hi, color=color, alpha=alpha, lw=0, zorder=zorder)
 
 
-PAD_IN = 0.02                                 # pad_inches of save(), needed by save_labels()
-
-
-def save_labels(fig, name, items):
-    """Write images/paper/<name>_labels.tex: the position of each label as a fraction of the
-    SAVED image, so that LaTeX can write the text on top of the included graphic (\\ovlfig /
-    \\ovltag macros, section 8). Use it for labels that must follow the document, e.g.
-    "Fig. 7" on the box that marks where another figure is taken.
-    items: (axes, x_data, y_data, latex_label, tikz_anchor)."""
-    if ARGS.show or not items:
-        return
-    fig.canvas.draw()
-    bb = fig.get_tightbbox(fig.canvas.get_renderer())                  # [in]
-    x0, y0 = bb.x0 - PAD_IN, bb.y0 - PAD_IN
-    w, h = bb.width + 2 * PAD_IN, bb.height + 2 * PAD_IN
-    out = [f"% {name}: label positions as a fraction of the image (generated, do not edit)"]
-    for ax, x, y, ref, anchor in items:
-        xd, yd = np.asarray(ax.transData.transform((x, y))) / fig.dpi
-        out.append(rf"\ovltag{{{(xd - x0) / w:.4f}}}{{{(yd - y0) / h:.4f}}}{{{anchor}}}{{{ref}}}")
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / f"{name}_labels.tex").write_text("\n".join(out) + "\n")
-    print(f"  -> {OUT.name}/{name}_labels.tex ({len(items)} labels)")
+PAD_IN = 0.02                                 # pad_inches of save()
 
 
 def show_if_requested():

@@ -1,5 +1,7 @@
 # figures written by the scripts
 images/
+# the palette pictures belong to the repository
+!palettes/images/
 
 # python
 __pycache__/

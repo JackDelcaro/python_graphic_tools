@@ -38,7 +38,10 @@ def main():
     names = re.findall(r"^def (fig_example_\w+)\(", (ROOT / "fig_examples.py").read_text(encoding="utf-8"),
                        flags=re.M)
     # a recipe may write several files (the pair writes <name>_a and <name>_b)
-    wrote = {"fig_example_pair": ["fig_example_pair_a", "fig_example_pair_b"]}
+    wrote = {"fig_example_pair": ["fig_example_pair_a", "fig_example_pair_b"],
+             "fig_example_bands": ["fig_example_bands_ramp", "fig_example_bands_patch"],
+             "fig_example_legends": [f"fig_example_legends_{s}" for s in
+                                     ("inside", "above", "above_boxed", "row", "row_boxed")]}
     has_seaborn = importlib.util.find_spec("seaborn") is not None
     if not has_seaborn:
         print("seaborn is not installed: skipping fig_example_map")
@@ -61,9 +64,9 @@ def main():
                 failures.append(f"fig_examples.py --layout {layout}:\n{text[-1500:]}")
             for n in names:
                 for stem in wrote.get(n, [n]):
-                    for ext in ("pdf", "svg", "png"):
-                        if not (out / f"{stem}.{ext}").exists():
-                            failures.append(f"[{layout}] missing {folder}/{stem}.{ext}")
+                    for fname in (f"{stem}.pdf", f"{stem}.svg", f"{stem}.png", f"{stem}_white.png"):
+                        if not (out / fname).exists():
+                            failures.append(f"[{layout}] missing {folder}/{fname}")
 
             code, text = run(work, env, "fig_template.py", "--layout", layout)
             status = "ok" if code == 0 and (out / "fig_template.pdf").exists() else "FAILED"

@@ -21,7 +21,8 @@ blocks**; do not edit them by hand, the next build overwrites them:
 `tools/build_code.py` finds the blocks by those marker strings. Do not rename or reword the markers.
 
 Everything else is edited directly: `fig_template.py`, `check_setup.py`, `README.md`, `SKILL.md`,
-`latex/*.tex`, `data/`, `tools/`.
+`latex/*.tex`, `data/`, `tools/`, `palettes/` (hand-maintained examples; `python
+palettes/generate_paper_color_palette.py` regenerates its markdown, CSV and images).
 
 ## Commands
 
@@ -36,9 +37,13 @@ cd latex && pdflatex figure_sheet_single && pdflatex figure_sheet_single   # a t
 After any change to code in the guide: build, run the smoke test, and **look at the figures** (run
 `fig_examples.py` for both layouts and open the PNGs in `images/`; the smoke test only checks that
 files are written and nothing crashes). The pictures in `docs/paper_figure_guide_img/` are the output of
-`fig_examples.py` (`--layout two` as `fig_example_<name>.png`, `--layout single` as
-`fig_example_<name>_single.png`; `fig_example_pair_single.png` is `pair_a` and `pair_b` side by side
-with a 4 % gap); regenerate them by hand when a recipe changes.
+`fig_examples.py`. The guide and the README show the `_white.png` files (opaque white background, made
+for markdown files because transparent PNGs have invisible labels on a dark theme): `--layout two` as
+`fig_example_<name>_white.png`, `--layout single` as `fig_example_<name>_single_white.png`;
+`fig_example_pair_single_white.png` is `pair_a_white` and `pair_b_white` side by side with a 4 % gap, and `fig_example_legends_panels_single_white.png` is `legends_inside`, `legends_above`
+and `legends_above_boxed` side by side (bottom-aligned). The
+transparent PNGs stay in the folder next to them (do not delete them). Regenerate by hand when a recipe
+changes.
 
 ## Conventions
 
